@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
+const OWNER_EMAIL = 'contact@aa-designs.com'
+const unlockedKey = (email) => `christmas-app-unlocked-${email}`
 const ACCOUNTS_KEY = 'christmas-app-accounts'
 const SESSION_KEY = 'christmas-app-session'
 const dataKey = (email) => `christmas-app-data-${email}`
@@ -62,13 +64,34 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authError, setAuthError] = useState('')
+  const [subscribed, setSubscribed] = useState(false)
   const [personName, setPersonName] = useState('')
   const [personBudget, setPersonBudget] = useState('')
   const [personNotes, setPersonNotes] = useState('')
   const [personLink, setPersonLink] = useState('')
 
   const account = sessionEmail ? accounts[sessionEmail] : null
+  const isOwner = !!account && account.email === OWNER_EMAIL
+  const locked = !!account && !isOwner && !subscribed
   const days = daysUntilChristmas()
+
+  useEffect(() => {
+    if (!sessionEmail) { setSubscribed(false); return }
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('subscribed') === '1') {
+      localStorage.setItem(unlockedKey(sessionEmail), '1')
+      params.delete('subscribed')
+      const q = params.toString()
+      window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''))
+    }
+    setSubscribed(localStorage.getItem(unlockedKey(sessionEmail)) === '1')
+  }, [sessionEmail])
+
+  function handleUnlock() {
+    if (!sessionEmail) return
+    localStorage.setItem(unlockedKey(sessionEmail), '1')
+    setSubscribed(true)
+  }
 
   useEffect(() => {
     if (sessionEmail) setPeople(loadJSON(dataKey(sessionEmail), []))
@@ -211,7 +234,7 @@ export default function App() {
               {authError && <p className="error">{authError}</p>}
               <button className="primary-btn" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
             </form>
-            <p className="fine-print">Yearly plan · $19.99/year — creating an account is free today, no payment is taken in the app. Subscribe through the button above. Accounts on this web version live on this device for now (see README).</p>
+            <p className="fine-print">Yearly plan · $19.99/year — create your account, then subscribe through Stripe to open your tracker. Accounts on this web version live on this device for now (see README).</p>
           </section>
           <footer className="app-footer">Created by AA Designs</footer>
         </main>
@@ -224,13 +247,21 @@ export default function App() {
       <BackgroundMotif />
       <main className="wrap">
         <header className="topbar">
-          <span>Signed in as {account.name} · {account.email} · Yearly plan</span>
+          <span>Signed in as {account.name} · {account.email} · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
         <h1>Christmas App</h1>
         <p className="countdown">{days} days until Christmas</p>
         <a className="subscribe-btn" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
 
+        {locked && (
+          <section className="card">
+            <h2>Subscribe to open your tracker</h2>
+            <p className="hint">Giftmas Tracker is $19.99 a year. Tap Subscribe to pay securely through Stripe, then come back here and tap the button below to open your list.</p>
+            <button type="button" className="primary-btn" onClick={handleUnlock}>I've subscribed — open my tracker</button>
+          </section>
+        )}
+        {!locked && (<>
         <section className="summary card">
           <div><strong>${totals.budget}</strong><span>Total budget</span></div>
           <div><strong>${totals.spent}</strong><span>Spent (bought)</span></div>
@@ -272,6 +303,7 @@ export default function App() {
           />
         ))}
         {people.length === 0 && <p className="hint center">No people yet — add your first person above.</p>}
+        </>)}
         <footer className="app-footer">Created by AA Designs</footer>
       </main>
     </div>
