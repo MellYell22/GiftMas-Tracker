@@ -111,6 +111,21 @@ export default function App() {
     return { budget, spent, left: budget - spent }
   }, [people])
 
+  const overBudget = useMemo(
+    () =>
+      people
+        .map((person) => {
+          const spent = person.gifts.filter((g) => g.checks.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
+          return { person, spent, over: spent - (Number(person.budget) || 0) }
+        })
+        .filter((x) => x.over > 0),
+    [people],
+  )
+
+  function jumpToPerson(id) {
+    document.getElementById(`person-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   function handleCreateAccount(e) {
     e.preventDefault()
     const email = authEmail.trim().toLowerCase()
@@ -272,6 +287,17 @@ export default function App() {
           </div>
         </section>
 
+        {overBudget.length > 0 && (
+          <section className="over-budget-alert" role="alert">
+            <strong>⚠️ Over budget</strong>
+            {overBudget.map(({ person, over }) => (
+              <button key={person.id} type="button" className="over-budget-link" onClick={() => jumpToPerson(person.id)}>
+                {person.name} is ${over} over their ${Number(person.budget) || 0} budget — tap to see their list
+              </button>
+            ))}
+          </section>
+        )}
+
         <section className="card">
           <h2>Start with your people</h2>
           <p className="hint">Add everyone first — just a name and a budget. Gifts can come later.</p>
@@ -307,6 +333,133 @@ export default function App() {
         <footer className="app-footer">Created by AA Designs</footer>
       </main>
     </div>
+  )
+}
+
+const HELPER_ERROR = "The gift helper couldn't answer just now — please try again in a moment."
+
+// Local, on-device helper for this web version: it runs entirely in the
+// browser (no external AI API key, no live model calls), using the person's
+// notes, budget and what's left to pick ideas that fit.
+const HELPER_IDEAS = [
+  { keys: ['fish'], name: 'Fishing lure gift set', price: 25, reason: 'fits the fishing notes' },
+  { keys: ['fish'], name: 'Tackle box organizer', price: 24, reason: 'keeps fishing gear tidy' },
+  { keys: ['fish'], name: 'Fishing hat', price: 18, reason: 'a small fishing extra' },
+  { keys: ['music', 'sing', 'song'], name: 'Bluetooth speaker', price: 35, reason: 'for a music lover' },
+  { keys: ['music', 'sing', 'song'], name: 'Vinyl record by a favorite artist', price: 28, reason: 'for a music lover' },
+  { keys: ['book', 'read'], name: 'Bestselling novel', price: 17, reason: 'for a reader' },
+  { keys: ['book', 'read'], name: 'Reading light and bookmark set', price: 21, reason: 'for a reader' },
+  { keys: ['cook', 'bake', 'kitchen', 'food'], name: 'Recipe journal', price: 16, reason: 'for someone who cooks' },
+  { keys: ['cook', 'bake', 'kitchen', 'food'], name: 'Spice sampler set', price: 24, reason: 'for someone who cooks' },
+  { keys: ['sport', 'football', 'basketball', 'baseball'], name: 'Team cap', price: 22, reason: 'for a sports fan' },
+  { keys: ['sport', 'football', 'basketball', 'baseball'], name: 'Sports towel and bottle set', price: 20, reason: 'for a sports fan' },
+  { keys: ['art', 'draw', 'paint', 'craft'], name: 'Sketchbook and pencil set', price: 19, reason: 'for someone arty' },
+  { keys: ['art', 'draw', 'paint', 'craft'], name: 'Watercolor paint set', price: 23, reason: 'for someone arty' },
+  { keys: ['garden', 'plant', 'flower'], name: 'Herb garden starter kit', price: 21, reason: 'for a gardener' },
+  { keys: ['garden', 'plant', 'flower'], name: 'Garden gloves and tool set', price: 26, reason: 'for a gardener' },
+  { keys: ['coffee'], name: 'Gourmet coffee sampler', price: 20, reason: 'for a coffee drinker' },
+  { keys: ['tea'], name: 'Loose-leaf tea sampler', price: 18, reason: 'for a tea drinker' },
+  { keys: ['game'], name: 'Card game for family night', price: 15, reason: 'fun for game night' },
+  { keys: [], name: 'Cozy Christmas socks', price: 12, reason: 'a cozy classic' },
+  { keys: [], name: 'Hot cocoa and mug gift set', price: 18, reason: 'a cozy classic' },
+  { keys: [], name: 'Scented candle', price: 16, reason: 'a simple favorite' },
+  { keys: [], name: 'Puzzle book collection', price: 14, reason: 'a simple favorite' },
+  { keys: [], name: 'Warm winter gloves', price: 20, reason: 'useful all winter' },
+  { keys: [], name: 'Picture frame for a family photo', price: 15, reason: 'a personal touch' },
+  { keys: [], name: 'Snack gift basket', price: 28, reason: 'easy to share' },
+  { keys: [], name: 'Board game for family night', price: 30, reason: 'fun for everyone' },
+]
+
+function helperSuggestions(person, left) {
+  const text = `${person.notes || ''}`.toLowerCase()
+  const matched = HELPER_IDEAS.filter((i) => i.keys.length > 0 && i.keys.some((k) => text.includes(k)))
+  const pool = [...matched, ...HELPER_IDEAS.filter((i) => i.keys.length === 0)]
+  const already = new Set(person.gifts.map((g) => (g.name || '').toLowerCase()))
+  return pool.filter((i) => i.price <= left && !already.has(i.name.toLowerCase())).slice(0, 4)
+}
+
+function GiftHelper({ person, spent, onAddGift }) {
+  const left = (Number(person.budget) || 0) - spent
+  const [open, setOpen] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [ideas, setIdeas] = useState([])
+  const [error, setError] = useState('')
+
+  function ask(e) {
+    if (e) e.preventDefault()
+    const q = input.trim()
+    try {
+      if (left <= 0) {
+        setIdeas([])
+        setError('')
+        setMessages((m) => [
+          ...m,
+          ...(q ? [{ from: 'you', text: q }] : []),
+          { from: 'helper', text: `There's no money left in ${person.name}'s budget, so I can't suggest anything that fits right now.` },
+        ])
+        setInput('')
+        return
+      }
+      const found = helperSuggestions(person, left)
+      if (!found.length) throw new Error('no ideas')
+      setIdeas(found)
+      setError('')
+      setMessages((m) => [
+        ...m,
+        ...(q ? [{ from: 'you', text: q }] : []),
+        { from: 'helper', text: `Here are ${found.length} ideas for ${person.name} that fit the $${left} left in their budget:` },
+      ])
+    } catch {
+      setError(HELPER_ERROR)
+    }
+    setInput('')
+  }
+
+  function addIdea(idea) {
+    onAddGift({
+      id: crypto.randomUUID(),
+      name: idea.name,
+      price: idea.price,
+      store: '',
+      link: '',
+      barcode: '',
+      photo: '',
+      checks: { toBuy: true, bought: false, wrapped: false, needReturn: false },
+    })
+    setIdeas((prev) => prev.filter((i) => i.name !== idea.name))
+  }
+
+  return (
+    <>
+      <button type="button" className="helper-tab" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        ✨ AI Gift Helper
+      </button>
+      {open && (
+        <div className="helper-panel">
+          <p className="helper-greeting">Hi! I suggest gift ideas for {person.name} that fit the ${left} left in their budget. Ask me, or tap “Suggest ideas”.</p>
+          {messages.map((m, idx) => (
+            <p key={idx} className={m.from === 'you' ? 'helper-msg you' : 'helper-msg'}>{m.text}</p>
+          ))}
+          {ideas.length > 0 && (
+            <ul className="helper-ideas">
+              {ideas.map((idea) => (
+                <li key={idea.name}>
+                  <span>{idea.name} — ${idea.price} · {idea.reason}</span>
+                  <button type="button" className="small-btn" onClick={() => addIdea(idea)}>+ Add to their list</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {error && <p className="error">{error}</p>}
+          <form className="helper-form" onSubmit={ask}>
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask for gift ideas…" aria-label="Ask the gift helper" maxLength={600} />
+            <button type="submit" className="small-btn">Ask</button>
+            <button type="button" className="small-btn" onClick={() => ask()}>Suggest ideas</button>
+          </form>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -354,15 +507,19 @@ function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift })
     onUpdateGift(gift.id, { checks: { ...gift.checks, [key]: !gift.checks[key] } })
   }
 
+  const over = spent - (Number(person.budget) || 0)
+
   return (
-    <section className="card person-card">
+    <section className="card person-card" id={`person-${person.id}`}>
       <div className="person-head">
         <h2>{person.name}</h2>
         <button type="button" className="small-btn danger" onClick={onDelete}>Delete person</button>
       </div>
       <p className="person-meta">Budget ${Number(person.budget) || 0} · Spent ${spent} · Left ${(Number(person.budget) || 0) - spent}</p>
+      {over > 0 && <p className="over-budget-note">⚠️ Over budget by ${over}</p>}
       {person.notes && <p className="person-notes">{person.notes}</p>}
       {person.link && <p><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
+      <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
 
       <ul className="gift-list">
         {person.gifts.map((gift) => (

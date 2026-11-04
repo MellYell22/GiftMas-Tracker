@@ -20,6 +20,18 @@ forgotten.
 - Barcode number typed or pasted in (live camera scanning is not in this
   web version)
 - Export PDF / Print and Share buttons (browser print / share sheet)
+- Over-budget alerts: a home-screen "⚠️ Over budget" notice naming who is
+  over and by how much (tap it to jump to their list), plus the same
+  warning on that person's card
+- AI Gift Helper: a small green tab running longways down the right side
+  of each person's card — tap it to open a chat that suggests gift ideas
+  within the money left in that person's budget, each with a one-tap
+  "+ Add to their list" button. Honest note: in this web version the
+  helper runs **locally in the browser** (rules based on the person's
+  notes and budget) — there is no external AI API key and no live model
+  call, so it costs nothing per use; if it cannot answer it says plainly
+  "The gift helper couldn't answer just now — please try again in a
+  moment."
 - Countdown to Christmas
 - Design: candy apple red Add-person button and countdown, deep pine green
   accents, door-with-wreath + tree motif only as a soft transparent background
