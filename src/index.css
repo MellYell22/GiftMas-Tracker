@@ -88,7 +88,7 @@ button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid t
 .small-btn.danger { color: var(--candy-dark); }
 
 .auth-tabs { display: flex; gap: 8px; margin-bottom: 6px; }
-.tab { background: #f1ead9; flex: 1; }
+.tab { background: var(--pine-soft); color: #fff; flex: 1; }
 .tab.active { background: var(--candy); color: #fff; }
 
 .summary { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
