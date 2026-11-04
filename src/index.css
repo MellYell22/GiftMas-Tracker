@@ -68,8 +68,10 @@ h2 { margin: 0 0 8px; font-size: 1.15rem; }
 label { display: block; font-size: 0.9rem; font-weight: 600; margin: 10px 0; }
 input {
   display: block; width: 100%; margin-top: 4px; padding: 9px 10px;
-  border: 1px solid #cfc6b8; border-radius: 8px; font: inherit; background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; font: inherit;
+  background: var(--candy); color: #fff;
 }
+input::placeholder { color: rgba(255, 255, 255, 0.65); }
 .optional-label { opacity: 0.45; font-weight: 400; font-size: 0.78rem; margin-left: 6px; text-transform: lowercase; }
 
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid transparent; padding: 9px 14px; }
