@@ -10,7 +10,7 @@ forgotten.
 
 ## Features
 
-- Create account / sign in (client-side, per-device — see the honest note below)
+- Supabase email/password accounts and private cloud gift lists
 - Add all your people first: name + budget, gifts later
 - One simple line per gift: gift name, price, where bought, with four small
   checkboxes — To buy, Bought, Wrapped, Return
@@ -47,9 +47,10 @@ npm run preview  # preview the production build
 
 ## Deploy (Vercel)
 
-1. Import the GitHub repo `MellYell22/christmas-app` into Vercel.
+1. Import the GitHub repo `MellYell22/GiftMas-Tracker` into Vercel.
 2. Framework preset: **Vite**. Build command: `npm run build`. Output: `dist`.
-3. No environment variables are needed for this version.
+3. The public Supabase project configuration is included. Optional overrides: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Never use a service-role key in browser code.
+4. Configure Supabase Authentication Site URL and allowed redirect URLs to match the deployed app before testing confirmation and password-reset emails.
 
 ## Stripe (already set up — do not duplicate)
 
@@ -65,16 +66,30 @@ Paying through the link creates the Stripe subscription; it does not by
 itself unlock anything inside the app yet — account/payment wiring is a
 later step (see below).
 
-## Honest note about accounts
+## Supabase connection
 
-Sign-in in this version is **client-side only**: accounts and lists are
-stored in the browser's local storage on that device, per account email.
-That means:
+Organization: aadesigns. Project: Giftmas Tracker (`czuxtspeuvfcqxsxqmho`).
 
-- A person's list does **not** sync to their other devices yet.
-- Passwords are not stored on a server and this is **not** production-grade
-  security — do not reuse an important password here.
+Accounts use Supabase Auth; passwords are no longer stored by the app. The
+`public.gift_lists` table stores each user's list, including gift details and
+photos. Row-level policies restrict reading and writing to the owning user.
+Cloud lists load after login and edits save automatically. Failed loads block
+editing; failed saves display an error and a retry button. Concurrent devices
+use last-write-wins for the whole list; realtime merging is not implemented.
 
-Real cloud accounts (a backend with a database, secure password hashing,
-password reset, and checking Stripe subscriptions before unlocking the
-yearly plan) are the next step before charging the public at scale.
+Older device-only accounts must register a real cloud account. After signing
+in, use **Import my older list from this device** to copy a local list into the
+new account. The original device data is retained. Import only on your own
+trusted device, because legacy local storage was not protected authentication.
+
+## Remaining launch checks
+
+- Verify account confirmation and password-reset emails on the final deployed
+  domain after configuring Supabase redirect URLs.
+- Stripe verification is still separate: the existing client-side unlock button
+  and URL flag do not prove payment. Add server-verified subscription status
+  before relying on the subscription gate for paid access.
+- The gift helper remains the existing local rules-based helper.
+
+Validation: production build, lint (warnings only), database insert/update and
+cross-user isolation in a rolled-back transaction, and Supabase security advisors.

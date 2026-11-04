@@ -1,20 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
+import { supabase } from './supabase'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
 const OWNER_EMAIL = 'contact@aa-designs.com'
 const unlockedKey = (email) => `christmas-app-unlocked-${email}`
-const ACCOUNTS_KEY = 'christmas-app-accounts'
-const SESSION_KEY = 'christmas-app-session'
 const dataKey = (email) => `christmas-app-data-${email}`
-
-// NOTE: client-side demo accounts only. Passwords are kept in this device's
-// local storage (lightly obfuscated) and are NOT secure cloud accounts.
-// Real cloud accounts come with a backend later — see README.md.
-function obfuscate(text) {
-  let h = 0
-  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
-  return `h${h}`
-}
 
 function loadJSON(key, fallback) {
   try {
@@ -56,8 +47,15 @@ function OptionalLabel() {
 }
 
 export default function App() {
-  const [accounts, setAccounts] = useState(() => loadJSON(ACCOUNTS_KEY, {}))
-  const [sessionEmail, setSessionEmail] = useState(() => localStorage.getItem(SESSION_KEY) || '')
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [recovery, setRecovery] = useState(false)
+  const [loadedUser, setLoadedUser] = useState('')
+  const [cloudMessage, setCloudMessage] = useState('')
+  const [retry, setRetry] = useState(0)
+  const lastSaved = useRef('')
+  const saveQueue = useRef(Promise.resolve())
+  const sessionEmail = user?.email || ''
   const [people, setPeople] = useState([])
   const [authMode, setAuthMode] = useState('create')
   const [authName, setAuthName] = useState('')
@@ -73,7 +71,7 @@ export default function App() {
   const [personNotes, setPersonNotes] = useState('')
   const [personLink, setPersonLink] = useState('')
 
-  const account = sessionEmail ? accounts[sessionEmail] : null
+  const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && account.email === OWNER_EMAIL
   const locked = !!account && !isOwner && !subscribed
   const days = daysUntilChristmas()
@@ -97,13 +95,56 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (sessionEmail) setPeople(loadJSON(dataKey(sessionEmail), []))
-    else setPeople([])
-  }, [sessionEmail])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null)
+      setAuthReady(true)
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
-    if (sessionEmail) localStorage.setItem(dataKey(sessionEmail), JSON.stringify(people))
-  }, [people, sessionEmail])
+    let cancelled = false
+    setLoadedUser('')
+    setPeople([])
+    if (!user?.id) return
+    setCloudMessage('Loading your saved list…')
+    async function load() {
+      await saveQueue.current
+      const { data, error } = await supabase.from('gift_lists').select('people').eq('user_id', user.id).maybeSingle()
+      if (cancelled) return
+      if (error) { setCloudMessage('Could not load your cloud list. Please retry.'); return }
+      const existing = data?.people || []
+      lastSaved.current = JSON.stringify(existing)
+      setPeople(existing)
+      setLoadedUser(user.id)
+      setCloudMessage('Cloud list loaded')
+    }
+    load().catch(() => { if (!cancelled) setCloudMessage('Could not load your cloud list. Please retry.') })
+    return () => { cancelled = true }
+  }, [user?.id, retry])
+
+  useEffect(() => {
+    if (!user?.id || loadedUser !== user.id) return
+    const serialized = JSON.stringify(people)
+    if (serialized === lastSaved.current) return
+    let cancelled = false
+    setCloudMessage('Saving…')
+    saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
+      const { error } = await supabase.from('gift_lists').upsert({ user_id: user.id, people })
+      if (cancelled) return
+      if (error) { setCloudMessage('Cloud save failed. Keep this page open and retry saving.'); return }
+      lastSaved.current = serialized
+      setCloudMessage('Saved to your account')
+    }).catch(() => { if (!cancelled) setCloudMessage('Cloud save failed. Keep this page open and retry saving.') })
+    return () => { cancelled = true }
+  }, [people, loadedUser, user?.id])
+
+  function importDeviceList() {
+    const legacy = loadJSON(dataKey(sessionEmail), [])
+    if (!Array.isArray(legacy) || !legacy.length) { setCloudMessage('No older list found on this device.'); return }
+    setPeople((current) => [...current, ...legacy.filter((p) => !current.some((item) => item.id === p.id))])
+  }
 
   const totals = useMemo(() => {
     const budget = people.reduce((sum, p) => sum + (Number(p.budget) || 0), 0)
@@ -129,49 +170,51 @@ export default function App() {
     document.getElementById(`person-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function handleCreateAccount(e) {
+  async function handleCreateAccount(e) {
     e.preventDefault()
-    const email = authEmail.trim().toLowerCase()
-    if (!authName.trim() || !email || !authPassword) return setAuthError('Fill in name, email, and password.')
-    if (accounts[email]) return setAuthError('That email already has an account — sign in instead.')
-    const next = { ...accounts, [email]: { name: authName.trim(), email, pass: obfuscate(authPassword) } }
-    setAccounts(next)
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
-    setSessionEmail(email)
-    localStorage.setItem(SESSION_KEY, email)
     setAuthError('')
+    if (!authName.trim()) return setAuthError('Enter your name.')
+    try {
+      const { error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPassword, options: { data: { name: authName.trim() }, emailRedirectTo: window.location.origin } })
+      if (error) throw error
+      setResetMessage('Check your email to confirm your account, then sign in.')
+      setAuthPassword('')
+    } catch (error) { setAuthError(error.message) }
   }
 
-  function handleSignIn(e) {
+  async function handleSignIn(e) {
     e.preventDefault()
-    const email = authEmail.trim().toLowerCase()
-    const found = accounts[email]
-    if (!found || found.pass !== obfuscate(authPassword)) return setAuthError('Email or password did not match.')
-    setSessionEmail(email)
-    localStorage.setItem(SESSION_KEY, email)
     setAuthError('')
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword })
+      if (error) throw error
+      setAuthPassword('')
+    } catch (error) { setAuthError(error.message) }
   }
 
-  function handleSignOut() {
-    setSessionEmail('')
-    localStorage.removeItem(SESSION_KEY)
+  async function handleSignOut() {
+    await saveQueue.current
+    if (loadedUser === user?.id && JSON.stringify(people) !== lastSaved.current) {
+      setCloudMessage('Your latest changes are not saved yet. Retry saving before signing out.')
+      return
+    }
+    const { error } = await supabase.auth.signOut()
+    if (error) setCloudMessage(error.message)
   }
 
-  function handleResetPassword(e) {
+  async function handleResetPassword(e) {
     e.preventDefault()
-    const email = authEmail.trim().toLowerCase()
-    if (!email || !newPassword) return setAuthError('Fill in your email and a new password.')
-    const found = accounts[email]
-    if (!found) return setAuthError('No account with that email on this device. Accounts live on the device where they were created, so the password has to be reset on that device.')
-    const next = { ...accounts, [email]: { ...found, pass: obfuscate(newPassword) } }
-    setAccounts(next)
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
-    setShowReset(false)
-    setNewPassword('')
-    setAuthPassword('')
-    setAuthMode('signin')
     setAuthError('')
-    setResetMessage('Password updated — sign in with your new password.')
+    try {
+      const { error } = recovery
+        ? await supabase.auth.updateUser({ password: newPassword })
+        : await supabase.auth.resetPasswordForEmail(authEmail.trim().toLowerCase(), { redirectTo: window.location.origin })
+      if (error) throw error
+      setNewPassword('')
+      setRecovery(false)
+      setShowReset(false)
+      setResetMessage(recovery ? 'Password updated.' : 'Check your email for a secure password-reset link.')
+    } catch (error) { setAuthError(error.message) }
   }
 
   function handleAddPerson(e) {
@@ -192,10 +235,6 @@ export default function App() {
     setPersonBudget('')
     setPersonNotes('')
     setPersonLink('')
-  }
-
-  function updatePerson(id, patch) {
-    setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
   }
 
   function deletePerson(id) {
@@ -240,6 +279,13 @@ export default function App() {
     }
   }
 
+  if (!authReady) return <main className="page"><p role="status">Loading your account…</p></main>
+  if (recovery) return <main className="page"><form className="card" onSubmit={handleResetPassword}>
+    <h2>Choose a new password</h2>
+    <label>New password<input type="password" minLength={8} required autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></label>
+    {authError && <p role="alert">{authError}</p>}
+    <button type="submit">Save password</button>
+  </form></main>
   if (!account) {
     return (
       <div className="page welcome-page">
@@ -264,9 +310,8 @@ export default function App() {
               {showReset ? (
                 <form onSubmit={handleResetPassword}>
                   <label>Email<input type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" /></label>
-                  <label>New password<input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" /></label>
                   {authError && <p className="error" role="alert">{authError}</p>}
-                  <button className="welcome-submit" type="submit">Set new password</button>
+                  <button className="welcome-submit" type="submit">Send password reset link</button>
                   <button type="button" className="forgot-link" onClick={() => { setShowReset(false); setAuthError('') }}>Back to sign in</button>
                 </form>
               ) : (
@@ -311,7 +356,14 @@ export default function App() {
             <button type="button" className="primary-btn" onClick={handleUnlock}>I've subscribed — open my tracker</button>
           </section>
         )}
-        {!locked && (<>
+        {!locked && <section className="card">
+          <p role="status">{cloudMessage}</p>
+          {loadedUser !== user.id ? <button type="button" onClick={() => setRetry((n) => n + 1)}>Retry loading</button> : <>
+            <button type="button" className="small-btn" onClick={() => setPeople((current) => [...current])}>Retry saving</button>
+            <button type="button" className="small-btn" onClick={importDeviceList}>Import my older list from this device</button>
+          </>}
+        </section>}
+        {!locked && loadedUser === user.id && (<>
         <section className="summary card">
           <div><strong>${totals.budget}</strong><span>Total budget</span></div>
           <div><strong>${totals.spent}</strong><span>Spent (bought)</span></div>
