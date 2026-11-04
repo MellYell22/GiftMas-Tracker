@@ -64,6 +64,9 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authError, setAuthError] = useState('')
+  const [showReset, setShowReset] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [resetMessage, setResetMessage] = useState('')
   const [subscribed, setSubscribed] = useState(false)
   const [personName, setPersonName] = useState('')
   const [personBudget, setPersonBudget] = useState('')
@@ -154,6 +157,23 @@ export default function App() {
     localStorage.removeItem(SESSION_KEY)
   }
 
+  function handleResetPassword(e) {
+    e.preventDefault()
+    const email = authEmail.trim().toLowerCase()
+    if (!email || !newPassword) return setAuthError('Fill in your email and a new password.')
+    const found = accounts[email]
+    if (!found) return setAuthError('No account with that email on this device. Accounts live on the device where they were created, so the password has to be reset on that device.')
+    const next = { ...accounts, [email]: { ...found, pass: obfuscate(newPassword) } }
+    setAccounts(next)
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next))
+    setShowReset(false)
+    setNewPassword('')
+    setAuthPassword('')
+    setAuthMode('signin')
+    setAuthError('')
+    setResetMessage('Password updated — sign in with your new password.')
+  }
+
   function handleAddPerson(e) {
     e.preventDefault()
     if (!personName.trim()) return
@@ -238,16 +258,30 @@ export default function App() {
           <section className="welcome-account">
             <div className="welcome-form-panel">
               <div className="auth-tabs">
-                <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => setAuthMode('create')}>Create account</button>
-                <button type="button" className={authMode === 'signin' ? 'tab active' : 'tab'} onClick={() => setAuthMode('signin')}>Sign in</button>
+                <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => { setAuthMode('create'); setShowReset(false); setAuthError('') }}>Create account</button>
+                <button type="button" className={authMode === 'signin' ? 'tab active' : 'tab'} onClick={() => { setAuthMode('signin'); setShowReset(false); setAuthError('') }}>Sign in</button>
               </div>
-              <form onSubmit={authMode === 'create' ? handleCreateAccount : handleSignIn}>
-                {authMode === 'create' && <label>Name<input autoComplete="name" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" /></label>}
-                <label>Email<input type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" /></label>
-                <label>Password<input type="password" autoComplete={authMode === 'create' ? 'new-password' : 'current-password'} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" /></label>
-                {authError && <p className="error" role="alert">{authError}</p>}
-                <button className="welcome-submit" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
-              </form>
+              {showReset ? (
+                <form onSubmit={handleResetPassword}>
+                  <label>Email<input type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" /></label>
+                  <label>New password<input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" /></label>
+                  {authError && <p className="error" role="alert">{authError}</p>}
+                  <button className="welcome-submit" type="submit">Set new password</button>
+                  <button type="button" className="forgot-link" onClick={() => { setShowReset(false); setAuthError('') }}>Back to sign in</button>
+                </form>
+              ) : (
+                <form onSubmit={authMode === 'create' ? handleCreateAccount : handleSignIn}>
+                  {authMode === 'create' && <label>Name<input autoComplete="name" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" /></label>}
+                  <label>Email<input type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" /></label>
+                  <label>Password<input type="password" autoComplete={authMode === 'create' ? 'new-password' : 'current-password'} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" /></label>
+                  {authError && <p className="error" role="alert">{authError}</p>}
+                  {resetMessage && <p className="hint" role="status">{resetMessage}</p>}
+                  <button className="welcome-submit" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
+                  {authMode === 'signin' && (
+                    <button type="button" className="forgot-link" onClick={() => { setShowReset(true); setAuthError(''); setResetMessage('') }}>Forgot password?</button>
+                  )}
+                </form>
+              )}
               <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
             </div>
             <footer className="welcome-footer">Created by AA Designs</footer>
