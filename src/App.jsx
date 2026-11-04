@@ -284,7 +284,7 @@ export default function App() {
               )}
               <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
             </div>
-            <footer className="welcome-footer">Created by AA Designs</footer>
+            <footer className="welcome-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
           </section>
         </main>
       </div>
@@ -365,7 +365,7 @@ export default function App() {
         ))}
         {people.length === 0 && <p className="hint center">No people yet — add your first person above.</p>}
         </>)}
-        <footer className="app-footer">Created by AA Designs</footer>
+        <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
     </div>
   )

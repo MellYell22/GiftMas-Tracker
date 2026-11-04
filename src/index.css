@@ -233,3 +233,5 @@ button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid t
 @media(min-width:1051px) { .welcome-tree { height:clamp(340px,48vh,540px); object-fit:contain; object-position:left bottom; } .welcome-price { top:35%; } .welcome-price strong { font-size:clamp(52px,5.8vw,90px); } }
 .forgot-link { display:block; margin:14px auto 0; background:none; border:none; color:#7a1f16; text-decoration:underline; font-family:inherit; font-size:17px; cursor:pointer; }
 .forgot-link:hover { color:#5b0905; }
+.feedback-line { font-size: 0.82em; opacity: 0.92; }
+.feedback-line a { color: inherit; text-decoration: underline; }
