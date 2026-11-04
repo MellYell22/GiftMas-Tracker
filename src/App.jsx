@@ -222,36 +222,36 @@ export default function App() {
 
   if (!account) {
     return (
-      <div className="page">
-        <BackgroundMotif />
-        <main className="auth-wrap">
-          <h1>Christmas App</h1>
-          <p className="countdown">{days} days until Christmas</p>
-          <p className="tagline">Budgets for everyone you shop for, and every gift checked off — bought and wrapped, so nothing is forgotten.</p>
-          <a className="subscribe-btn" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
-          <section className="card">
-            <div className="auth-tabs">
-              <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => setAuthMode('create')}>Create account</button>
-              <button type="button" className={authMode === 'signin' ? 'tab active' : 'tab'} onClick={() => setAuthMode('signin')}>Sign in</button>
-            </div>
-            <form onSubmit={authMode === 'create' ? handleCreateAccount : handleSignIn}>
-              {authMode === 'create' && (
-                <label>Name
-                  <input value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" />
-                </label>
-              )}
-              <label>Email
-                <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" />
-              </label>
-              <label>Password
-                <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" />
-              </label>
-              {authError && <p className="error">{authError}</p>}
-              <button className="primary-btn" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
-            </form>
-            <p className="fine-print">Yearly plan · $19.99/year — create your account, then subscribe through Stripe to open your tracker. Accounts on this web version live on this device for now (see README).</p>
+      <div className="page welcome-page">
+        <main className="welcome-layout">
+          <section className="welcome-intro">
+            <h1>Giftmas<br />Tracker</h1>
+            <div className="welcome-divider" aria-hidden="true" />
+            <p className="welcome-subtitle">with AI Gift Shopper Helper</p>
+            <p className="welcome-description">Set a budget for everyone on your list and track each gift from bought to wrapped. Your AI Gift Shopper Helper suggests thoughtful gifts based on your loved ones’ interests, wishes, and your remaining budget.</p>
+            <img className="welcome-tree" src="/christmas-tree.png" alt="Christmas tree decorated with red bows, golden ornaments and warm lights, surrounded by wrapped presents" />
           </section>
-          <footer className="app-footer">Created by AA Designs</footer>
+          <section className="welcome-offer" aria-label="Yearly subscription">
+            <img className="welcome-wreath" src="/christmas-wreath.png" alt="" />
+            <div className="welcome-price"><strong>$19.99</strong><span>per year</span><a className="welcome-subscribe" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe</a></div>
+          </section>
+          <section className="welcome-account">
+            <div className="welcome-form-panel">
+              <div className="auth-tabs">
+                <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => setAuthMode('create')}>Create account</button>
+                <button type="button" className={authMode === 'signin' ? 'tab active' : 'tab'} onClick={() => setAuthMode('signin')}>Sign in</button>
+              </div>
+              <form onSubmit={authMode === 'create' ? handleCreateAccount : handleSignIn}>
+                {authMode === 'create' && <label>Name<input autoComplete="name" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Your name" /></label>}
+                <label>Email<input type="email" autoComplete="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" /></label>
+                <label>Password<input type="password" autoComplete={authMode === 'create' ? 'new-password' : 'current-password'} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" /></label>
+                {authError && <p className="error" role="alert">{authError}</p>}
+                <button className="welcome-submit" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
+              </form>
+              <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
+            </div>
+            <footer className="welcome-footer">Created by AA Designs</footer>
+          </section>
         </main>
       </div>
     )
@@ -265,7 +265,8 @@ export default function App() {
           <span>Signed in as {account.name} · {account.email} · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
-        <h1>Christmas App</h1>
+        <h1>Giftmas Tracker</h1>
+        <p className="tagline">with AI Gift Shopper Helper</p>
         <p className="countdown">{days} days until Christmas</p>
         <a className="subscribe-btn" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
 
