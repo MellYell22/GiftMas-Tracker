@@ -1,7 +1,7 @@
 // Giftmas Tracker: signed Stripe webhook. No Stripe secret is committed to Git.
 // The Stripe signing secret is stored in Supabase Vault and is returned only
 // to the service role by giftmas_webhook_signing_secret().
-import { withSupabase } from 'npm:@supabase/server@1'
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0'
 
 const PAYMENT_LINK_ID = 'plink_1UY9l7LxgEPijLi3lqaCVM5o'
 const encoder = new TextEncoder()
@@ -25,14 +25,15 @@ async function verifyStripeSignature(body: string, header: string, secret: strin
     let diff = 0
     for (let n = 0; n < signed.length; n++) diff |= signed[n] ^ provided[n]
     return diff === 0
-  })
+  }
 }
 
 export default {
-  fetch: withSupabase({ auth: 'none' }, async (req, ctx) => {
+  async fetch(req: Request) {
     if (req.method !== 'POST') return response('Method not allowed', 405)
     const body = await req.text()
-    const { data: signingSecret, error: secretError } = await ctx.supabaseAdmin.rpc('giftmas_webhook_signing_secret')
+    const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+    const { data: signingSecret, error: secretError } = await db.rpc('giftmas_webhook_signing_secret')
     if (secretError || !signingSecret) {
       console.error('Giftmas webhook signing secret unavailable', secretError?.message)
       return response('Webhook not configured', 503)
@@ -45,7 +46,6 @@ export default {
       const event = JSON.parse(body)
       const obj = event.data?.object
       if (!obj || typeof event.created !== 'number') return response('Invalid event', 400)
-      const db = ctx.supabaseAdmin
       if (event.type === 'checkout.session.completed') {
         if (obj.payment_link !== PAYMENT_LINK_ID || obj.mode !== 'subscription' ||
             !['paid', 'no_payment_required'].includes(obj.payment_status)) return response('Ignored')
