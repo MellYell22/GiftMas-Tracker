@@ -4,7 +4,6 @@ import { supabase } from './supabase'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
 const OWNER_EMAIL = 'contact@aa-designs.com'
-const unlockedKey = (email) => `christmas-app-unlocked-${email}`
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -66,6 +65,7 @@ export default function App() {
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const [subscriptionRefresh, setSubscriptionRefresh] = useState(0)
   const [personName, setPersonName] = useState('')
   const [personBudget, setPersonBudget] = useState('')
   const [personNotes, setPersonNotes] = useState('')
@@ -74,25 +74,25 @@ export default function App() {
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && account.email === OWNER_EMAIL
   const locked = !!account && !isOwner && !subscribed
+  const checkoutUrl = user?.id ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}` : '#giftmas-account'
   const days = daysUntilChristmas()
 
   useEffect(() => {
-    if (!sessionEmail) { setSubscribed(false); return }
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('subscribed') === '1') {
-      localStorage.setItem(unlockedKey(sessionEmail), '1')
-      params.delete('subscribed')
-      const q = params.toString()
-      window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''))
+    if (!user?.id) { setSubscribed(false); return }
+    let active = true
+    async function refreshSubscription() {
+      const { data, error } = await supabase.from('giftmas_subscriptions')
+        .select('status,current_period_end')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!active) return
+      const validPeriod = !data?.current_period_end || new Date(data.current_period_end) > new Date()
+      setSubscribed(!error && ['active', 'trialing'].includes(data?.status) && validPeriod)
     }
-    setSubscribed(localStorage.getItem(unlockedKey(sessionEmail)) === '1')
-  }, [sessionEmail])
-
-  function handleUnlock() {
-    if (!sessionEmail) return
-    localStorage.setItem(unlockedKey(sessionEmail), '1')
-    setSubscribed(true)
-  }
+    refreshSubscription()
+    const timer = window.setInterval(refreshSubscription, 15000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [user?.id, subscriptionRefresh])
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -299,9 +299,9 @@ export default function App() {
           </section>
           <section className="welcome-offer" aria-label="Yearly subscription">
             <img className="welcome-wreath" src="/christmas-wreath.png" alt="" />
-            <div className="welcome-price"><strong>$19.99</strong><span>per year</span><a className="welcome-subscribe" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe</a></div>
+            <div className="welcome-price"><strong>$19.99</strong><span>per year</span><a className="welcome-subscribe" href="#giftmas-account">Create account to subscribe</a></div>
           </section>
-          <section className="welcome-account">
+          <section className="welcome-account" id="giftmas-account">
             <div className="welcome-form-panel">
               <div className="auth-tabs">
                 <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => { setAuthMode('create'); setShowReset(false); setAuthError('') }}>Create account</button>
@@ -347,13 +347,13 @@ export default function App() {
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with AI Gift Shopper Helper</p>
         <p className="countdown">{days} days until Christmas</p>
-        <a className="subscribe-btn" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
+        {!isOwner && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
 
         {locked && (
           <section className="card">
             <h2>Subscribe to open your tracker</h2>
-            <p className="hint">Giftmas Tracker is $19.99 a year. Tap Subscribe to pay securely through Stripe, then come back here and tap the button below to open your list.</p>
-            <button type="button" className="primary-btn" onClick={handleUnlock}>I've subscribed — open my tracker</button>
+            <p className="hint">Giftmas Tracker is $19.99 a year. Tap Subscribe to pay securely through Stripe, then come back here and check your subscription status. Access will be granted only after Stripe confirms payment.</p>
+            <button type="button" className="primary-btn" onClick={() => setSubscriptionRefresh((n) => n + 1)}>Check subscription status</button>
           </section>
         )}
         {!locked && <section className="card">
