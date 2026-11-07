@@ -25,7 +25,7 @@ async function verifyStripeSignature(body: string, header: string, secret: strin
     let diff = 0
     for (let n = 0; n < signed.length; n++) diff |= signed[n] ^ provided[n]
     return diff === 0
-  }
+  })
 }
 
 export default {
@@ -94,5 +94,5 @@ export default {
       console.error('Giftmas Stripe webhook processing error', err)
       return response('Processing failed', 500)
     }
-  })
+  }
 }
