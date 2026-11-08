@@ -4,7 +4,6 @@ import { supabase } from './supabase'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
 const OWNER_EMAIL = 'contact@aa-designs.com'
-const unlockedKey = (email) => `christmas-app-unlocked-${email}`
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -66,6 +65,9 @@ export default function App() {
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const [accessUser, setAccessUser] = useState('')
+  const [accessMessage, setAccessMessage] = useState('Checking subscription…')
+  const [accessRetry, setAccessRetry] = useState(0)
   const [personName, setPersonName] = useState('')
   const [personBudget, setPersonBudget] = useState('')
   const [personNotes, setPersonNotes] = useState('')
@@ -73,25 +75,47 @@ export default function App() {
 
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && account.email === OWNER_EMAIL
-  const locked = !!account && !isOwner && !subscribed
+  const locked = !!account && (accessUser !== user.id || !subscribed)
+  const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
   const days = daysUntilChristmas()
 
   useEffect(() => {
-    if (!sessionEmail) { setSubscribed(false); return }
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('subscribed') === '1') {
-      localStorage.setItem(unlockedKey(sessionEmail), '1')
-      params.delete('subscribed')
-      const q = params.toString()
-      window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''))
+    let cancelled = false
+    let inFlight = false
+    setSubscribed(false)
+    setAccessUser('')
+    if (!user?.id) return
+    const uid = user.id
+    async function checkAccess() {
+      if (inFlight) return
+      inFlight = true
+      try {
+        const { data, error } = await supabase.rpc('giftmas_has_access', { p_user_id: uid })
+        if (cancelled) return
+        setAccessUser(uid)
+        setSubscribed(!error && data === true)
+        setAccessMessage(error ? 'Could not verify your subscription. Please retry.' : data === true ? 'Subscription verified.' : 'No active subscription confirmed yet. After paying, access updates automatically. Use your account email at checkout.')
+      } catch {
+        if (!cancelled) {
+          setAccessUser(uid)
+          setSubscribed(false)
+          setAccessMessage('Could not verify your subscription. Please retry.')
+        }
+      } finally { inFlight = false }
     }
-    setSubscribed(localStorage.getItem(unlockedKey(sessionEmail)) === '1')
-  }, [sessionEmail])
+    checkAccess()
+    const timer = window.setInterval(checkAccess, 10000)
+    window.addEventListener('focus', checkAccess)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', checkAccess)
+    }
+  }, [user?.id, accessRetry])
 
   function handleUnlock() {
-    if (!sessionEmail) return
-    localStorage.setItem(unlockedKey(sessionEmail), '1')
-    setSubscribed(true)
+    setAccessMessage('Checking subscription…')
+    setAccessRetry((n) => n + 1)
   }
 
   useEffect(() => {
@@ -107,7 +131,7 @@ export default function App() {
     let cancelled = false
     setLoadedUser('')
     setPeople([])
-    if (!user?.id) return
+    if (!user?.id || locked) return
     setCloudMessage('Loading your saved list…')
     async function load() {
       await saveQueue.current
@@ -122,10 +146,10 @@ export default function App() {
     }
     load().catch(() => { if (!cancelled) setCloudMessage('Could not load your cloud list. Please retry.') })
     return () => { cancelled = true }
-  }, [user?.id, retry])
+  }, [user?.id, retry, locked])
 
   useEffect(() => {
-    if (!user?.id || loadedUser !== user.id) return
+    if (!user?.id || locked || loadedUser !== user.id) return
     const serialized = JSON.stringify(people)
     if (serialized === lastSaved.current) return
     let cancelled = false
@@ -138,7 +162,7 @@ export default function App() {
       setCloudMessage('Saved to your account')
     }).catch(() => { if (!cancelled) setCloudMessage('Cloud save failed. Keep this page open and retry saving.') })
     return () => { cancelled = true }
-  }, [people, loadedUser, user?.id])
+  }, [people, loadedUser, user?.id, locked])
 
   function importDeviceList() {
     const legacy = loadJSON(dataKey(sessionEmail), [])
@@ -299,7 +323,7 @@ export default function App() {
           </section>
           <section className="welcome-offer" aria-label="Yearly subscription">
             <img className="welcome-wreath" src="/christmas-wreath.png" alt="" />
-            <div className="welcome-price"><strong>$19.99</strong><span>per year</span><a className="welcome-subscribe" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe</a></div>
+            <div className="welcome-price"><strong>$19.99</strong><span>per year</span><button type="button" className="welcome-subscribe" onClick={() => { setAuthMode('create'); document.querySelector('input[autocomplete="name"]')?.focus(); setResetMessage('Create and verify your account, then sign in to subscribe securely.') }}>Subscribe</button></div>
           </section>
           <section className="welcome-account">
             <div className="welcome-form-panel">
@@ -347,13 +371,14 @@ export default function App() {
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with AI Gift Shopper Helper</p>
         <p className="countdown">{days} days until Christmas</p>
-        <a className="subscribe-btn" href={PAYMENT_LINK} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
+        <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
 
         {locked && (
           <section className="card">
             <h2>Subscribe to open your tracker</h2>
-            <p className="hint">Giftmas Tracker is $19.99 a year. Tap Subscribe to pay securely through Stripe, then come back here and tap the button below to open your list.</p>
-            <button type="button" className="primary-btn" onClick={handleUnlock}>I've subscribed — open my tracker</button>
+            <p className="hint">Giftmas Tracker is $19.99 a year. Subscribe using your account email. Your tracker opens after payment is verified.</p>
+            <p role="status">{accessMessage}</p>
+            <button type="button" className="primary-btn" onClick={handleUnlock}>Check payment status</button>
           </section>
         )}
         {!locked && <section className="card">
