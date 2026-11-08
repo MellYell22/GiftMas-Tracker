@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from './supabase'
 
-const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
-const OWNER_EMAIL = 'contact@aa-designs.com'
+const PAYMENT_LINK = 'https://buy.stripe.com/test_5kQ3cx7Uy7Pc0qj2YxeIw00'
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -74,7 +73,7 @@ export default function App() {
   const [personLink, setPersonLink] = useState('')
 
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
-  const isOwner = !!account && account.email === OWNER_EMAIL
+  const isOwner = false
   const locked = !!account && (accessUser !== user.id || !subscribed)
   const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
   const days = daysUntilChristmas()
@@ -90,7 +89,7 @@ export default function App() {
       if (inFlight) return
       inFlight = true
       try {
-        const { data, error } = await supabase.rpc('giftmas_has_access', { p_user_id: uid })
+        const { data, error } = await supabase.rpc('giftmas_test_has_access', { p_user_id: uid })
         if (cancelled) return
         setAccessUser(uid)
         setSubscribed(!error && data === true)
@@ -135,7 +134,7 @@ export default function App() {
     setCloudMessage('Loading your saved list…')
     async function load() {
       await saveQueue.current
-      const { data, error } = await supabase.from('gift_lists').select('people').eq('user_id', user.id).maybeSingle()
+      const { data, error } = await supabase.from('giftmas_test_lists').select('people').eq('user_id', user.id).maybeSingle()
       if (cancelled) return
       if (error) { setCloudMessage('Could not load your cloud list. Please retry.'); return }
       const existing = data?.people || []
@@ -155,7 +154,7 @@ export default function App() {
     let cancelled = false
     setCloudMessage('Saving…')
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
-      const { error } = await supabase.from('gift_lists').upsert({ user_id: user.id, people })
+      const { error } = await supabase.from('giftmas_test_lists').upsert({ user_id: user.id, people })
       if (cancelled) return
       if (error) { setCloudMessage('Cloud save failed. Keep this page open and retry saving.'); return }
       lastSaved.current = serialized
@@ -313,7 +312,7 @@ export default function App() {
   if (!account) {
     return (
       <div className="page welcome-page">
-        <main className="welcome-layout">
+        <p role="status" style={{background:"#fff3cd",padding:"16px",color:"#332701"}}>TEST MODE — no real charges. Use card 4242 4242 4242 4242, expiry 12/34, CVC 123. Sign in with your existing Giftmas account. Test gifts stay separate.</p><main className="welcome-layout">
           <section className="welcome-intro">
             <h1>Giftmas<br />Tracker</h1>
             <div className="welcome-divider" aria-hidden="true" />
@@ -363,7 +362,7 @@ export default function App() {
   return (
     <div className="page">
       <BackgroundMotif />
-      <main className="wrap">
+      <main className="wrap"><p role="status" style={{background:"#fff3cd",padding:"16px",color:"#332701"}}>TEST MODE — no real charges. Use card 4242 4242 4242 4242, expiry 12/34, CVC 123. After checkout, return to this tab; your test tracker should unlock automatically.</p>
         <header className="topbar">
           <span>Signed in as {account.name} · {account.email} · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
