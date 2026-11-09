@@ -78,6 +78,11 @@ export default function App() {
   const locked = !!account && (accessUser !== user.id || !subscribed)
   const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
   const days = daysUntilChristmas()
+  const saveTone = /not saved|could not/i.test(cloudMessage)
+    ? ' is-error'
+    : /saving|loading/i.test(cloudMessage)
+      ? ' is-busy'
+      : ''
 
   useEffect(() => {
     let cancelled = false
@@ -137,14 +142,14 @@ export default function App() {
       await saveQueue.current
       const { data, error } = await supabase.from('gift_lists').select('people').eq('user_id', user.id).maybeSingle()
       if (cancelled) return
-      if (error) { setCloudMessage('Could not load your cloud list. Please retry.'); return }
+      if (error) { setCloudMessage('Could not load your list — please retry.'); return }
       const existing = data?.people || []
       lastSaved.current = JSON.stringify(existing)
       setPeople(existing)
       setLoadedUser(user.id)
-      setCloudMessage('Cloud list loaded')
+      setCloudMessage('Your list is up to date')
     }
-    load().catch(() => { if (!cancelled) setCloudMessage('Could not load your cloud list. Please retry.') })
+    load().catch(() => { if (!cancelled) setCloudMessage('Could not load your list — please retry.') })
     return () => { cancelled = true }
   }, [user?.id, retry, locked])
 
@@ -157,10 +162,10 @@ export default function App() {
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
       const { error } = await supabase.from('gift_lists').upsert({ user_id: user.id, people })
       if (cancelled) return
-      if (error) { setCloudMessage('Cloud save failed. Keep this page open and retry saving.'); return }
+      if (error) { setCloudMessage('Not saved yet — keep this page open and retry.'); return }
       lastSaved.current = serialized
       setCloudMessage('Saved to your account')
-    }).catch(() => { if (!cancelled) setCloudMessage('Cloud save failed. Keep this page open and retry saving.') })
+    }).catch(() => { if (!cancelled) setCloudMessage('Not saved yet — keep this page open and retry.') })
     return () => { cancelled = true }
   }, [people, loadedUser, user?.id, locked])
 
@@ -219,7 +224,7 @@ export default function App() {
   async function handleSignOut() {
     await saveQueue.current
     if (loadedUser === user?.id && JSON.stringify(people) !== lastSaved.current) {
-      setCloudMessage('Your latest changes are not saved yet. Retry saving before signing out.')
+      setCloudMessage('Your latest changes are not saved yet — retry saving before signing out.')
       return
     }
     const { error } = await supabase.auth.signOut()
@@ -371,7 +376,8 @@ export default function App() {
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with AI Gift Shopper Helper</p>
         <p className="countdown">{days} days until Christmas</p>
-        <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>
+        <div className="masthead-rule" aria-hidden="true" />
+        {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
 
         {locked && (
           <section className="card">
@@ -381,13 +387,20 @@ export default function App() {
             <button type="button" className="primary-btn" onClick={handleUnlock}>Check payment status</button>
           </section>
         )}
-        {!locked && <section className="card">
-          <p role="status">{cloudMessage}</p>
-          {loadedUser !== user.id ? <button type="button" onClick={() => setRetry((n) => n + 1)}>Retry loading</button> : <>
-            <button type="button" className="small-btn" onClick={() => setPeople((current) => [...current])}>Retry saving</button>
-            <button type="button" className="small-btn" onClick={importDeviceList}>Import my older list from this device</button>
-          </>}
-        </section>}
+        {!locked && (
+          <div className={`status-line${saveTone}`}>
+            <span className="dot" aria-hidden="true" />
+            <span role="status">{cloudMessage}</span>
+            {loadedUser !== user.id ? (
+              <button type="button" className="ghost-link" onClick={() => setRetry((n) => n + 1)}>Retry loading</button>
+            ) : (
+              <>
+                <button type="button" className="ghost-link" onClick={() => setPeople((current) => [...current])}>Retry saving</button>
+                <button type="button" className="ghost-link" onClick={importDeviceList}>Import an older list from this device</button>
+              </>
+            )}
+          </div>
+        )}
         {!locked && loadedUser === user.id && (<>
         <section className="summary card">
           <div><strong>${totals.budget}</strong><span>Total budget</span></div>
@@ -585,6 +598,7 @@ function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift })
   const [showDetails, setShowDetails] = useState(false)
 
   const spent = person.gifts.filter((g) => g.checks.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
+  const over = spent - (Number(person.budget) || 0)
 
   function handlePhoto(e) {
     const file = e.target.files?.[0]
@@ -619,15 +633,13 @@ function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift })
     onUpdateGift(gift.id, { checks: { ...gift.checks, [key]: !gift.checks[key] } })
   }
 
-  const over = spent - (Number(person.budget) || 0)
-
   return (
     <section className="card person-card" id={`person-${person.id}`}>
       <div className="person-head">
         <h2>{person.name}</h2>
         <button type="button" className="small-btn danger" onClick={onDelete}>Delete person</button>
       </div>
-      <p className="person-meta">Budget ${Number(person.budget) || 0} · Spent ${spent} · Left ${(Number(person.budget) || 0) - spent}</p>
+      <p className={over > 0 ? 'person-meta over' : 'person-meta'}>Budget ${Number(person.budget) || 0} · Spent ${spent} · Left ${(Number(person.budget) || 0) - spent}</p>
       {over > 0 && <p className="over-budget-note">⚠️ Over budget by ${over}</p>}
       {person.notes && <p className="person-notes">{person.notes}</p>}
       {person.link && <p><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
