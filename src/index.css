@@ -94,11 +94,26 @@ h2 {
   letter-spacing: 0.01em;
 }
 .tagline {
-  margin: 10px 0 0;
-  font-size: 1.05rem;
-  color: var(--gold-soft);
-  letter-spacing: 0.02em;
+  margin: 12px 0 0;
+  font-size: 1.3rem;
+  color: var(--gold-pale);
+  letter-spacing: 0.015em;
 }
+
+/* The AI helper is the selling point — let it shine. */
+.helper-highlight {
+  font-weight: 700;
+  background: linear-gradient(100deg, #e9c45f 0%, #f4d683 30%, #fff6d8 46%, #f0cf78 60%, #c99b2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #f4d683;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+@supports not (background-clip: text) {
+  .helper-highlight { color: #f4d683; -webkit-text-fill-color: currentColor; }
+}
+.welcome-subtitle .helper-highlight { font-weight: 650; }
 .countdown {
   margin: 6px 0 20px;
   font: normal 1.15rem/1.3 Georgia, "Times New Roman", serif;
@@ -490,6 +505,7 @@ button:disabled { opacity: 0.55; cursor: default; filter: none; }
   .person-card, .person-body { display: block !important; }
   .person-row { padding: 0; }
   .status-chip, .return-flag { border: 1px solid #d8c9a0; color: #4a3f31; background: none; }
+  .helper-highlight { background: none; -webkit-text-fill-color: currentColor; color: #6b5a3e; }
   .wrap { max-width: 100%; padding: 0; }
   h1, h2, .summary strong { color: var(--candy); text-shadow: none; }
   .countdown, .tagline { color: #6b5a3e; }
@@ -514,7 +530,7 @@ button:disabled { opacity: 0.55; cursor: default; filter: none; }
 .welcome-intro { position:relative; min-width:0; }
 .welcome-intro h1 { font:normal clamp(64px,6.6vw,104px)/.9 Georgia,serif; text-align:left; margin:0 0 24px; letter-spacing:-.035em; color:#f7e7b0; text-shadow:none; }
 .welcome-divider { height:2px; background:linear-gradient(90deg,transparent,#d8b24e 18%,#eacb6a 80%,transparent); margin:0 0 15px; width:94%; }
-.welcome-subtitle { font-size:clamp(18px,2vw,30px); line-height:1.3; margin:0 0 16px; font-weight:500; }
+.welcome-subtitle { font-size:clamp(20px,2.2vw,33px); line-height:1.25; margin:0 0 18px; font-weight:500; text-wrap:balance; }
 .welcome-description { font-size:clamp(16px,1.5vw,22px); line-height:1.4; margin:0; color:#fff3cf; }
 .welcome-tree { width:148%; max-width:none; display:block; margin:8px 0 0 -15%; position:relative; pointer-events:none; }
 .welcome-offer { position:relative; aspect-ratio:1/1.12; min-width:0; }

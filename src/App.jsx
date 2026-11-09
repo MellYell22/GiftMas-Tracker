@@ -332,7 +332,7 @@ export default function App() {
           <section className="welcome-intro">
             <h1>Giftmas<br />Tracker</h1>
             <div className="welcome-divider" aria-hidden="true" />
-            <p className="welcome-subtitle">with AI Gift Shopper Helper</p>
+            <p className="welcome-subtitle">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
             <p className="welcome-description">Set a budget for everyone on your list and track each gift from bought to wrapped. Your AI Gift Shopper Helper suggests thoughtful gifts based on your loved ones’ interests, wishes, and your remaining budget.</p>
             <img className="welcome-tree" src="/christmas-tree.png" alt="Christmas tree decorated with red bows, golden ornaments and warm lights, surrounded by wrapped presents" />
           </section>
@@ -384,7 +384,7 @@ export default function App() {
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
         <h1>Giftmas Tracker</h1>
-        <p className="tagline">with AI Gift Shopper Helper</p>
+        <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <p className="countdown">{days} days until Christmas</p>
         <div className="masthead-rule" aria-hidden="true" />
         {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
