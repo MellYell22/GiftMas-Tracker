@@ -389,7 +389,6 @@ export default function App() {
         </header>
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
-        <p className="countdown">{days} days until Christmas</p>
         <div className="masthead-rule" aria-hidden="true" />
         {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
 
@@ -435,7 +434,7 @@ export default function App() {
         )}
 
         {people.length > 0 && (
-          <div className="people-list">
+          <section className="list-panel">
             {people.map((person) => (
               <PersonCard
                 key={person.id}
@@ -449,7 +448,12 @@ export default function App() {
                 onDeleteGift={(giftId) => deleteGift(person.id, giftId)}
               />
             ))}
-          </div>
+            {!addingPerson && (
+              <button type="button" className="new-row" onClick={() => setAddingPerson(true)}>
+                <span className="plus" aria-hidden="true">+</span> New Person
+              </button>
+            )}
+          </section>
         )}
 
         {addingPerson || people.length === 0 ? (
@@ -484,9 +488,7 @@ export default function App() {
               <button className="add-person-btn" type="submit">Add person</button>
             </form>
           </section>
-        ) : (
-          <button type="button" className="add-row-btn" onClick={() => setAddingPerson(true)}>+ Add a person</button>
-        )}
+        ) : null}
 
         {people.length > 0 && loadedUser === user.id && (
           <p className="tucked-away">
@@ -494,6 +496,7 @@ export default function App() {
           </p>
         )}
         </>)}
+        <p className="countdown-foot">{days} days until Christmas</p>
         <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
     </div>
@@ -629,6 +632,31 @@ function GiftHelper({ person, spent, onAddGift }) {
 
 const STAGE_LABEL = { toBuy: 'To buy', bought: 'Bought', wrapped: 'Wrapped' }
 
+function StageIcon({ stage }) {
+  if (stage === 'bought') {
+    return (
+      <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true">
+        <path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  if (stage === 'wrapped') {
+    return (
+      <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true">
+        <rect x="2.6" y="8" width="14.8" height="9.4" rx="1.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M2.6 12.2h14.8M10 8v9.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M10 8C8.2 8 6.6 6.9 6.6 5.4S7.8 3 9 3.6 10 8 10 8zm0 0c1.8 0 3.4-1.1 3.4-2.6S12.2 3 11 3.6 10 8 10 8z"
+          fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true">
+      <circle cx="10" cy="10" r="6.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeDasharray="2.6 2.4" />
+    </svg>
+  )
+}
+
 function stageOf(checks) {
   if (checks.wrapped) return 'wrapped'
   if (checks.bought) return 'bought'
@@ -660,32 +688,17 @@ function Chevron({ open }) {
 
 function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGift, onUpdateGift, onDeleteGift }) {
   const [editing, setEditing] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
   const [editName, setEditName] = useState(person.name)
   const [editBudget, setEditBudget] = useState(person.budget ?? '')
   const [editNotes, setEditNotes] = useState(person.notes || '')
   const [editLink, setEditLink] = useState(person.link || '')
-  const [addingGift, setAddingGift] = useState(false)
-  const [giftDetails, setGiftDetails] = useState(false)
   const [giftName, setGiftName] = useState('')
   const [giftPrice, setGiftPrice] = useState('')
-  const [giftStore, setGiftStore] = useState('')
-  const [giftLink, setGiftLink] = useState('')
-  const [giftBarcode, setGiftBarcode] = useState('')
-  const [giftPhoto, setGiftPhoto] = useState('')
 
   const budget = Number(person.budget) || 0
   const spent = person.gifts.filter((g) => g.checks.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
-  const left = budget - spent
   const over = spent - budget
-  const boughtCount = person.gifts.filter((g) => g.checks.bought).length
-
-  function handlePhoto(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setGiftPhoto(String(reader.result || ''))
-    reader.readAsDataURL(file)
-  }
 
   function startEditing() {
     setEditName(person.name)
@@ -693,6 +706,7 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
     setEditNotes(person.notes || '')
     setEditLink(person.link || '')
     setEditing(true)
+    setShowOptions(false)
   }
 
   function saveDetails(e) {
@@ -707,50 +721,34 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
     setEditing(false)
   }
 
-  function resetGiftForm() {
-    setGiftName('')
-    setGiftPrice('')
-    setGiftStore('')
-    setGiftLink('')
-    setGiftBarcode('')
-    setGiftPhoto('')
-    setGiftDetails(false)
-  }
-
   function submitGift(e) {
     e.preventDefault()
-    if (!giftName.trim() && !giftPhoto) return
+    if (!giftName.trim()) return
     onAddGift({
       id: crypto.randomUUID(),
       name: giftName.trim(),
       price: giftPrice === '' ? '' : Number(giftPrice),
-      store: giftStore.trim(),
-      link: giftLink.trim(),
-      barcode: giftBarcode.trim(),
-      photo: giftPhoto,
+      store: '', link: '', barcode: '', photo: '',
       checks: { toBuy: true, bought: false, wrapped: false, needReturn: false },
     })
-    resetGiftForm()
-    setAddingGift(false)
+    setGiftName('')
+    setGiftPrice('')
   }
 
   return (
-    <section className={open ? 'person-card is-open' : 'person-card'} id={`person-${person.id}`}>
+    <div className={open ? 'person-block is-open' : 'person-block'} id={`person-${person.id}`}>
       <button type="button" className="person-row" aria-expanded={open} onClick={onToggle}>
-        <span className="person-row-name">{person.name}</span>
-        <span className="person-row-count">
-          {person.gifts.length === 0 ? 'No gifts yet' : `${boughtCount} of ${person.gifts.length} bought`}
-        </span>
-        <span className={over > 0 ? 'person-row-left is-over' : budget ? 'person-row-left' : 'person-row-left is-unset'}>
-          {budget ? (over > 0 ? `$${over} over` : `$${left} left`) : 'Set a budget'}
-        </span>
         <Chevron open={open} />
+        <span className="person-row-name">{person.name}</span>
+        <span className={over > 0 ? 'person-row-money is-over' : budget ? 'person-row-money' : 'person-row-money is-unset'}>
+          {budget ? <>${spent} <i>/</i> ${budget}</> : 'Set a budget'}
+        </span>
       </button>
 
       {open && (
         <div className="person-body">
           {editing ? (
-            <form onSubmit={saveDetails} className="person-form person-edit">
+            <form onSubmit={saveDetails} className="person-edit">
               <label>Name
                 <input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Person's name" />
               </label>
@@ -765,106 +763,89 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
               </label>
               <div className="form-actions">
                 <button type="button" className="small-btn" onClick={() => setEditing(false)}>Cancel</button>
+                <button className="small-btn save" type="submit">Save changes</button>
               </div>
-              <button className="add-person-btn" type="submit">Save changes</button>
             </form>
           ) : (
             <>
-              <div className="person-detail-head">
-                <p className="person-meta">
-                  Budget {budget ? `$${budget}` : <span className="needs-budget">not set yet</span>} · Spent ${spent} · Left ${left}
-                </p>
-                <button type="button" className="small-btn" onClick={startEditing}>Edit details</button>
-              </div>
               {person.notes && <p className="person-notes">{person.notes}</p>}
               {person.link && <p className="person-notes"><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
-            </>
-          )}
 
-          {person.gifts.length > 0 && (
-            <ul className="gift-list">
-              {person.gifts.map((gift) => {
-                const stage = stageOf(gift.checks)
-                return (
-                  <li key={gift.id} className="gift-line">
-                    {gift.photo && <img className="gift-photo" src={gift.photo} alt={gift.name || 'Gift photo'} />}
-                    <span className="gift-main">
-                      <strong>{gift.name || 'Gift (photo)'}</strong>
-                      {gift.price !== '' && <> · ${gift.price}</>}
-                      {gift.store && <> · {gift.store}</>}
-                      {gift.barcode && <> · Barcode {gift.barcode}</>}
-                      {gift.link && <> · <a href={gift.link} target="_blank" rel="noreferrer">View product</a></>}
-                    </span>
-                    <span className="gift-actions">
-                      <button
-                        type="button"
-                        className={`status-chip is-${stage}`}
-                        onClick={() => onUpdateGift(gift.id, { checks: checksForStage(gift.checks, nextStage(stage)) })}
-                        title="Tap to move this gift along"
-                      >
-                        {STAGE_LABEL[stage]}
-                      </button>
-                      {stage !== 'toBuy' && (
+              <ul className="gift-list">
+                {person.gifts.map((gift) => {
+                  const stage = stageOf(gift.checks)
+                  return (
+                    <li key={gift.id} className="gift-row" data-stage={stage}>
+                      <span className="gift-name">
+                        {gift.name || 'Gift'}
+                        {gift.store && <small>{gift.store}</small>}
+                      </span>
+                      <span className="gift-price">{gift.price === '' ? '' : `$${gift.price}`}</span>
+                      <span className="row-actions">
                         <button
                           type="button"
-                          className={gift.checks.needReturn ? 'return-flag is-on' : 'return-flag'}
+                          className={gift.checks.needReturn ? 'flag-btn is-on' : 'flag-btn'}
+                          title={gift.checks.needReturn ? 'Marked to return' : 'Mark to return'}
+                          aria-label={gift.checks.needReturn ? 'Marked to return' : 'Mark to return'}
+                          aria-pressed={!!gift.checks.needReturn}
+                          tabIndex={stage === 'toBuy' ? -1 : 0}
+                          aria-hidden={stage === 'toBuy'}
                           onClick={() => onUpdateGift(gift.id, { checks: { ...gift.checks, needReturn: !gift.checks.needReturn } })}
+                        >↩</button>
+                        <button
+                          type="button"
+                          className={`stage-btn is-${stage}`}
+                          title={`${STAGE_LABEL[stage]} — tap to change`}
+                          aria-label={`${gift.name || 'Gift'}: ${STAGE_LABEL[stage]}. Tap to change.`}
+                          onClick={() => onUpdateGift(gift.id, { checks: checksForStage(gift.checks, nextStage(stage)) })}
                         >
-                          {gift.checks.needReturn ? '↩ Returning' : 'Return?'}
+                          <StageIcon stage={stage} />
                         </button>
-                      )}
-                      <button type="button" className="icon-btn" aria-label={`Delete ${gift.name || 'gift'}`} onClick={() => onDeleteGift(gift.id)}>✕</button>
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+                        <button type="button" className="row-x" aria-label={`Delete ${gift.name || 'gift'}`} onClick={() => onDeleteGift(gift.id)}>✕</button>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
 
-          {addingGift ? (
-            <form onSubmit={submitGift} className="gift-form">
-              <label>Gift
-                <input autoFocus value={giftName} onChange={(e) => setGiftName(e.target.value)} placeholder="Gift name" />
-              </label>
-              <label>Price
-                <input type="number" min="0" step="0.01" value={giftPrice} onChange={(e) => setGiftPrice(e.target.value)} placeholder="25" />
-              </label>
-              {giftDetails && (
-                <>
-                  <label>Where bought from <OptionalLabel />
-                    <input value={giftStore} onChange={(e) => setGiftStore(e.target.value)} placeholder="Target" />
-                  </label>
-                  <label>Product link <OptionalLabel />
-                    <input value={giftLink} onChange={(e) => setGiftLink(e.target.value)} placeholder="https://…" />
-                  </label>
-                  <label>Barcode number <OptionalLabel />
-                    <input value={giftBarcode} onChange={(e) => setGiftBarcode(e.target.value)} placeholder="Barcode number" inputMode="numeric" />
-                  </label>
-                  <label className="file-label">Photo <OptionalLabel />
-                    <input type="file" accept="image/*" onChange={handlePhoto} />
-                  </label>
-                </>
+              <form className="new-gift-row" onSubmit={submitGift}>
+                <span className="plus" aria-hidden="true">+</span>
+                <input
+                  className="new-gift-name"
+                  value={giftName}
+                  onChange={(e) => setGiftName(e.target.value)}
+                  placeholder="New Gift"
+                  aria-label={`New gift for ${person.name}`}
+                />
+                <input
+                  className="new-gift-price"
+                  type="number" min="0" step="0.01"
+                  value={giftPrice}
+                  onChange={(e) => setGiftPrice(e.target.value)}
+                  placeholder="$"
+                  aria-label="Price"
+                />
+                {(giftName.trim() || giftPrice !== '') && <button type="submit" className="row-add">Add</button>}
+                <button
+                  type="button"
+                  className={showOptions ? 'row-gear is-on' : 'row-gear'}
+                  aria-expanded={showOptions}
+                  aria-label={`Options for ${person.name}`}
+                  onClick={() => setShowOptions((v) => !v)}
+                >⚙</button>
+              </form>
+
+              {showOptions && (
+                <div className="person-options">
+                  <button type="button" className="small-btn" onClick={startEditing}>Edit name, budget &amp; notes</button>
+                  <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
+                  <button type="button" className="small-btn danger" onClick={onDelete}>Delete {person.name}</button>
+                </div>
               )}
-              {giftPhoto && <img className="gift-photo preview" src={giftPhoto} alt="New gift preview" />}
-              <div className="form-actions">
-                {!giftDetails && (
-                  <button type="button" className="small-btn" onClick={() => setGiftDetails(true)}>+ Store, photo &amp; link</button>
-                )}
-                <button type="button" className="small-btn" onClick={() => { resetGiftForm(); setAddingGift(false) }}>Cancel</button>
-              </div>
-              <button className="primary-btn" type="submit">Add gift</button>
-            </form>
-          ) : (
-            <button type="button" className="add-row-btn subtle" onClick={() => setAddingGift(true)}>+ Add a gift</button>
+            </>
           )}
-
-          <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
-
-          <div className="person-footer">
-            <button type="button" className="small-btn danger" onClick={onDelete}>Delete {person.name}</button>
-          </div>
         </div>
       )}
-    </section>
+    </div>
   )
 }
