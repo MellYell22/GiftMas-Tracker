@@ -284,6 +284,10 @@ export default function App() {
     setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, gifts: [...p.gifts, gift] } : p)))
   }
 
+  function updatePerson(personId, patch) {
+    setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, ...patch } : p)))
+  }
+
   function updateGift(personId, giftId, patch) {
     setPeople((prev) =>
       prev.map((p) =>
@@ -440,6 +444,7 @@ export default function App() {
                 onToggle={() => setOpenPerson((id) => (id === person.id ? null : person.id))}
                 onDelete={() => deletePerson(person.id)}
                 onAddGift={(gift) => addGift(person.id, gift)}
+                onUpdatePerson={(patch) => updatePerson(person.id, patch)}
                 onUpdateGift={(giftId, patch) => updateGift(person.id, giftId, patch)}
                 onDeleteGift={(giftId) => deleteGift(person.id, giftId)}
               />
@@ -653,7 +658,12 @@ function Chevron({ open }) {
   )
 }
 
-function PersonCard({ person, open, onToggle, onDelete, onAddGift, onUpdateGift, onDeleteGift }) {
+function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGift, onUpdateGift, onDeleteGift }) {
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(person.name)
+  const [editBudget, setEditBudget] = useState(person.budget ?? '')
+  const [editNotes, setEditNotes] = useState(person.notes || '')
+  const [editLink, setEditLink] = useState(person.link || '')
   const [addingGift, setAddingGift] = useState(false)
   const [giftDetails, setGiftDetails] = useState(false)
   const [giftName, setGiftName] = useState('')
@@ -675,6 +685,26 @@ function PersonCard({ person, open, onToggle, onDelete, onAddGift, onUpdateGift,
     const reader = new FileReader()
     reader.onload = () => setGiftPhoto(String(reader.result || ''))
     reader.readAsDataURL(file)
+  }
+
+  function startEditing() {
+    setEditName(person.name)
+    setEditBudget(person.budget ?? '')
+    setEditNotes(person.notes || '')
+    setEditLink(person.link || '')
+    setEditing(true)
+  }
+
+  function saveDetails(e) {
+    e.preventDefault()
+    if (!editName.trim()) return
+    onUpdatePerson({
+      name: editName.trim(),
+      budget: editBudget === '' ? '' : Number(editBudget),
+      notes: editNotes.trim(),
+      link: editLink.trim(),
+    })
+    setEditing(false)
   }
 
   function resetGiftForm() {
@@ -711,17 +741,45 @@ function PersonCard({ person, open, onToggle, onDelete, onAddGift, onUpdateGift,
         <span className="person-row-count">
           {person.gifts.length === 0 ? 'No gifts yet' : `${boughtCount} of ${person.gifts.length} bought`}
         </span>
-        <span className={over > 0 ? 'person-row-left is-over' : 'person-row-left'}>
-          {over > 0 ? `$${over} over` : `$${left} left`}
+        <span className={over > 0 ? 'person-row-left is-over' : budget ? 'person-row-left' : 'person-row-left is-unset'}>
+          {budget ? (over > 0 ? `$${over} over` : `$${left} left`) : 'Set a budget'}
         </span>
         <Chevron open={open} />
       </button>
 
       {open && (
         <div className="person-body">
-          <p className="person-meta">Budget ${budget} · Spent ${spent} · Left ${left}</p>
-          {person.notes && <p className="person-notes">{person.notes}</p>}
-          {person.link && <p className="person-notes"><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
+          {editing ? (
+            <form onSubmit={saveDetails} className="person-form person-edit">
+              <label>Name
+                <input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Person's name" />
+              </label>
+              <label>Budget
+                <input type="number" min="0" step="0.01" value={editBudget} onChange={(e) => setEditBudget(e.target.value)} placeholder="300" />
+              </label>
+              <label>Notes, sizes, wishes &amp; ideas <OptionalLabel />
+                <input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Loves gardening, size medium…" />
+              </label>
+              <label>Link <OptionalLabel />
+                <input value={editLink} onChange={(e) => setEditLink(e.target.value)} placeholder="https://…" />
+              </label>
+              <div className="form-actions">
+                <button type="button" className="small-btn" onClick={() => setEditing(false)}>Cancel</button>
+              </div>
+              <button className="add-person-btn" type="submit">Save changes</button>
+            </form>
+          ) : (
+            <>
+              <div className="person-detail-head">
+                <p className="person-meta">
+                  Budget {budget ? `$${budget}` : <span className="needs-budget">not set yet</span>} · Spent ${spent} · Left ${left}
+                </p>
+                <button type="button" className="small-btn" onClick={startEditing}>Edit details</button>
+              </div>
+              {person.notes && <p className="person-notes">{person.notes}</p>}
+              {person.link && <p className="person-notes"><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
+            </>
+          )}
 
           {person.gifts.length > 0 && (
             <ul className="gift-list">
