@@ -68,6 +68,9 @@ export default function App() {
   const [accessUser, setAccessUser] = useState('')
   const [accessMessage, setAccessMessage] = useState('Checking subscription…')
   const [accessRetry, setAccessRetry] = useState(0)
+  const [openPerson, setOpenPerson] = useState(null)
+  const [addingPerson, setAddingPerson] = useState(false)
+  const [personDetails, setPersonDetails] = useState(false)
   const [personName, setPersonName] = useState('')
   const [personBudget, setPersonBudget] = useState('')
   const [personNotes, setPersonNotes] = useState('')
@@ -196,7 +199,10 @@ export default function App() {
   )
 
   function jumpToPerson(id) {
-    document.getElementById(`person-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setOpenPerson(id)
+    window.setTimeout(() => {
+      document.getElementById(`person-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
   }
 
   async function handleCreateAccount(e) {
@@ -249,10 +255,11 @@ export default function App() {
   function handleAddPerson(e) {
     e.preventDefault()
     if (!personName.trim()) return
+    const id = crypto.randomUUID()
     setPeople((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id,
         name: personName.trim(),
         budget: personBudget === '' ? '' : Number(personBudget),
         notes: personNotes.trim(),
@@ -260,6 +267,9 @@ export default function App() {
         gifts: [],
       },
     ])
+    setOpenPerson(id)
+    setAddingPerson(false)
+    setPersonDetails(false)
     setPersonName('')
     setPersonBudget('')
     setPersonNotes('')
@@ -393,12 +403,9 @@ export default function App() {
             <span role="status">{cloudMessage}</span>
             {loadedUser !== user.id ? (
               <button type="button" className="ghost-link" onClick={() => setRetry((n) => n + 1)}>Retry loading</button>
-            ) : (
-              <>
-                <button type="button" className="ghost-link" onClick={() => setPeople((current) => [...current])}>Retry saving</button>
-                <button type="button" className="ghost-link" onClick={importDeviceList}>Import an older list from this device</button>
-              </>
-            )}
+            ) : saveTone === ' is-error' ? (
+              <button type="button" className="ghost-link" onClick={() => setPeople((current) => [...current])}>Retry saving</button>
+            ) : null}
           </div>
         )}
         {!locked && loadedUser === user.id && (<>
@@ -423,37 +430,64 @@ export default function App() {
           </section>
         )}
 
-        <section className="card">
-          <h2>Start with your people</h2>
-          <p className="hint">Add everyone first — just a name and a budget. Gifts can come later.</p>
-          <form onSubmit={handleAddPerson} className="person-form">
-            <label>Name
-              <input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Person's name" />
-            </label>
-            <label>Budget
-              <input type="number" min="0" step="0.01" value={personBudget} onChange={(e) => setPersonBudget(e.target.value)} placeholder="300" />
-            </label>
-            <label>Notes, sizes, wishes &amp; ideas <OptionalLabel />
-              <input value={personNotes} onChange={(e) => setPersonNotes(e.target.value)} placeholder="Notes" />
-            </label>
-            <label>Link <OptionalLabel />
-              <input value={personLink} onChange={(e) => setPersonLink(e.target.value)} placeholder="https://…" />
-            </label>
-            <button className="add-person-btn" type="submit">Add another person</button>
-          </form>
-        </section>
+        {people.length > 0 && (
+          <div className="people-list">
+            {people.map((person) => (
+              <PersonCard
+                key={person.id}
+                person={person}
+                open={openPerson === person.id}
+                onToggle={() => setOpenPerson((id) => (id === person.id ? null : person.id))}
+                onDelete={() => deletePerson(person.id)}
+                onAddGift={(gift) => addGift(person.id, gift)}
+                onUpdateGift={(giftId, patch) => updateGift(person.id, giftId, patch)}
+                onDeleteGift={(giftId) => deleteGift(person.id, giftId)}
+              />
+            ))}
+          </div>
+        )}
 
-        {people.map((person) => (
-          <PersonCard
-            key={person.id}
-            person={person}
-            onDelete={() => deletePerson(person.id)}
-            onAddGift={(gift) => addGift(person.id, gift)}
-            onUpdateGift={(giftId, patch) => updateGift(person.id, giftId, patch)}
-            onDeleteGift={(giftId) => deleteGift(person.id, giftId)}
-          />
-        ))}
-        {people.length === 0 && <p className="hint center">No people yet — add your first person above.</p>}
+        {addingPerson || people.length === 0 ? (
+          <section className="card">
+            <h2>{people.length === 0 ? 'Who are you shopping for?' : 'Add a person'}</h2>
+            <p className="hint">Just a name and a budget. Gifts can come later.</p>
+            <form onSubmit={handleAddPerson} className="person-form">
+              <label>Name
+                <input autoFocus={people.length > 0} value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Person's name" />
+              </label>
+              <label>Budget
+                <input type="number" min="0" step="0.01" value={personBudget} onChange={(e) => setPersonBudget(e.target.value)} placeholder="300" />
+              </label>
+              {personDetails && (
+                <>
+                  <label>Notes, sizes, wishes &amp; ideas <OptionalLabel />
+                    <input value={personNotes} onChange={(e) => setPersonNotes(e.target.value)} placeholder="Loves gardening, size medium…" />
+                  </label>
+                  <label>Link <OptionalLabel />
+                    <input value={personLink} onChange={(e) => setPersonLink(e.target.value)} placeholder="https://…" />
+                  </label>
+                </>
+              )}
+              <div className="form-actions">
+                {!personDetails && (
+                  <button type="button" className="small-btn" onClick={() => setPersonDetails(true)}>+ Notes &amp; link</button>
+                )}
+                {people.length > 0 && (
+                  <button type="button" className="small-btn" onClick={() => { setAddingPerson(false); setPersonDetails(false) }}>Cancel</button>
+                )}
+              </div>
+              <button className="add-person-btn" type="submit">Add person</button>
+            </form>
+          </section>
+        ) : (
+          <button type="button" className="add-row-btn" onClick={() => setAddingPerson(true)}>+ Add a person</button>
+        )}
+
+        {people.length > 0 && loadedUser === user.id && (
+          <p className="tucked-away">
+            <button type="button" className="ghost-link" onClick={importDeviceList}>Import an older list from this device</button>
+          </p>
+        )}
         </>)}
         <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
@@ -558,7 +592,7 @@ function GiftHelper({ person, spent, onAddGift }) {
   return (
     <>
       <button type="button" className="helper-tab" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        ✨ AI Gift Helper
+        ✨ {open ? 'Hide the AI Gift Helper' : 'Ask the AI Gift Helper'}
       </button>
       {open && (
         <div className="helper-panel">
@@ -588,17 +622,52 @@ function GiftHelper({ person, spent, onAddGift }) {
   )
 }
 
-function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift }) {
+const STAGE_LABEL = { toBuy: 'To buy', bought: 'Bought', wrapped: 'Wrapped' }
+
+function stageOf(checks) {
+  if (checks.wrapped) return 'wrapped'
+  if (checks.bought) return 'bought'
+  return 'toBuy'
+}
+
+function nextStage(stage) {
+  return stage === 'toBuy' ? 'bought' : stage === 'bought' ? 'wrapped' : 'toBuy'
+}
+
+// Wrapped implies bought, so the budget maths stays honest however they tap.
+function checksForStage(checks, stage) {
+  return {
+    ...checks,
+    toBuy: stage === 'toBuy',
+    bought: stage === 'bought' || stage === 'wrapped',
+    wrapped: stage === 'wrapped',
+    needReturn: stage === 'toBuy' ? false : checks.needReturn,
+  }
+}
+
+function Chevron({ open }) {
+  return (
+    <svg className={open ? 'chevron is-open' : 'chevron'} viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function PersonCard({ person, open, onToggle, onDelete, onAddGift, onUpdateGift, onDeleteGift }) {
+  const [addingGift, setAddingGift] = useState(false)
+  const [giftDetails, setGiftDetails] = useState(false)
   const [giftName, setGiftName] = useState('')
   const [giftPrice, setGiftPrice] = useState('')
   const [giftStore, setGiftStore] = useState('')
   const [giftLink, setGiftLink] = useState('')
   const [giftBarcode, setGiftBarcode] = useState('')
   const [giftPhoto, setGiftPhoto] = useState('')
-  const [showDetails, setShowDetails] = useState(false)
 
+  const budget = Number(person.budget) || 0
   const spent = person.gifts.filter((g) => g.checks.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
-  const over = spent - (Number(person.budget) || 0)
+  const left = budget - spent
+  const over = spent - budget
+  const boughtCount = person.gifts.filter((g) => g.checks.bought).length
 
   function handlePhoto(e) {
     const file = e.target.files?.[0]
@@ -606,6 +675,16 @@ function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift })
     const reader = new FileReader()
     reader.onload = () => setGiftPhoto(String(reader.result || ''))
     reader.readAsDataURL(file)
+  }
+
+  function resetGiftForm() {
+    setGiftName('')
+    setGiftPrice('')
+    setGiftStore('')
+    setGiftLink('')
+    setGiftBarcode('')
+    setGiftPhoto('')
+    setGiftDetails(false)
   }
 
   function submitGift(e) {
@@ -621,73 +700,113 @@ function PersonCard({ person, onDelete, onAddGift, onUpdateGift, onDeleteGift })
       photo: giftPhoto,
       checks: { toBuy: true, bought: false, wrapped: false, needReturn: false },
     })
-    setGiftName('')
-    setGiftPrice('')
-    setGiftStore('')
-    setGiftLink('')
-    setGiftBarcode('')
-    setGiftPhoto('')
-  }
-
-  function toggleCheck(gift, key) {
-    onUpdateGift(gift.id, { checks: { ...gift.checks, [key]: !gift.checks[key] } })
+    resetGiftForm()
+    setAddingGift(false)
   }
 
   return (
-    <section className="card person-card" id={`person-${person.id}`}>
-      <div className="person-head">
-        <h2>{person.name}</h2>
-        <button type="button" className="small-btn danger" onClick={onDelete}>Delete person</button>
-      </div>
-      <p className={over > 0 ? 'person-meta over' : 'person-meta'}>Budget ${Number(person.budget) || 0} · Spent ${spent} · Left ${(Number(person.budget) || 0) - spent}</p>
-      {over > 0 && <p className="over-budget-note">⚠️ Over budget by ${over}</p>}
-      {person.notes && <p className="person-notes">{person.notes}</p>}
-      {person.link && <p><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
-      <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
+    <section className={open ? 'person-card is-open' : 'person-card'} id={`person-${person.id}`}>
+      <button type="button" className="person-row" aria-expanded={open} onClick={onToggle}>
+        <span className="person-row-name">{person.name}</span>
+        <span className="person-row-count">
+          {person.gifts.length === 0 ? 'No gifts yet' : `${boughtCount} of ${person.gifts.length} bought`}
+        </span>
+        <span className={over > 0 ? 'person-row-left is-over' : 'person-row-left'}>
+          {over > 0 ? `$${over} over` : `$${left} left`}
+        </span>
+        <Chevron open={open} />
+      </button>
 
-      <ul className="gift-list">
-        {person.gifts.map((gift) => (
-          <li key={gift.id} className="gift-line">
-            {gift.photo && <img className="gift-photo" src={gift.photo} alt={gift.name || 'Gift photo'} />}
-            <span className="gift-main">
-              <strong>{gift.name || 'Gift (photo)'}</strong>
-              {gift.price !== '' && <> · ${gift.price}</>}
-              {gift.store && <> · {gift.store}</>}
-              {gift.barcode && <> · Barcode {gift.barcode}</>}
-              {gift.link && <> · <a href={gift.link} target="_blank" rel="noreferrer">View product</a></>}
-            </span>
-            <span className="checks">
-              <label><input type="checkbox" checked={gift.checks.toBuy} onChange={() => toggleCheck(gift, 'toBuy')} /> To buy</label>
-              <label><input type="checkbox" checked={gift.checks.bought} onChange={() => toggleCheck(gift, 'bought')} /> Bought</label>
-              <label><input type="checkbox" checked={gift.checks.wrapped} onChange={() => toggleCheck(gift, 'wrapped')} /> Wrapped</label>
-              <label><input type="checkbox" checked={gift.checks.needReturn} onChange={() => toggleCheck(gift, 'needReturn')} /> Return</label>
-            </span>
-            <button type="button" className="small-btn danger" onClick={() => onDeleteGift(gift.id)}>Delete</button>
-          </li>
-        ))}
-      </ul>
+      {open && (
+        <div className="person-body">
+          <p className="person-meta">Budget ${budget} · Spent ${spent} · Left ${left}</p>
+          {person.notes && <p className="person-notes">{person.notes}</p>}
+          {person.link && <p className="person-notes"><a href={person.link} target="_blank" rel="noreferrer">View link</a></p>}
 
-      <form onSubmit={submitGift} className="gift-form">
-        <input value={giftName} onChange={(e) => setGiftName(e.target.value)} placeholder="Gift name" aria-label="Gift name" />
-        <input type="number" min="0" step="0.01" value={giftPrice} onChange={(e) => setGiftPrice(e.target.value)} placeholder="Price" aria-label="Price" />
-        <input value={giftStore} onChange={(e) => setGiftStore(e.target.value)} placeholder="Where bought from" aria-label="Where bought from" />
-        <label className="file-label">Photo <OptionalLabel />
-          <input type="file" accept="image/*" onChange={handlePhoto} />
-        </label>
-        {giftPhoto && <img className="gift-photo preview" src={giftPhoto} alt="New gift preview" />}
-        <button type="button" className="small-btn" onClick={() => setShowDetails((v) => !v)}>More details — all optional</button>
-        {showDetails && (
-          <>
-            <label>Product link <OptionalLabel />
-              <input value={giftLink} onChange={(e) => setGiftLink(e.target.value)} placeholder="https://…" />
-            </label>
-            <label>Barcode number — type or paste it <OptionalLabel />
-              <input value={giftBarcode} onChange={(e) => setGiftBarcode(e.target.value)} placeholder="Barcode number" inputMode="numeric" />
-            </label>
-          </>
-        )}
-        <button className="primary-btn" type="submit">Add gift</button>
-      </form>
+          {person.gifts.length > 0 && (
+            <ul className="gift-list">
+              {person.gifts.map((gift) => {
+                const stage = stageOf(gift.checks)
+                return (
+                  <li key={gift.id} className="gift-line">
+                    {gift.photo && <img className="gift-photo" src={gift.photo} alt={gift.name || 'Gift photo'} />}
+                    <span className="gift-main">
+                      <strong>{gift.name || 'Gift (photo)'}</strong>
+                      {gift.price !== '' && <> · ${gift.price}</>}
+                      {gift.store && <> · {gift.store}</>}
+                      {gift.barcode && <> · Barcode {gift.barcode}</>}
+                      {gift.link && <> · <a href={gift.link} target="_blank" rel="noreferrer">View product</a></>}
+                    </span>
+                    <span className="gift-actions">
+                      <button
+                        type="button"
+                        className={`status-chip is-${stage}`}
+                        onClick={() => onUpdateGift(gift.id, { checks: checksForStage(gift.checks, nextStage(stage)) })}
+                        title="Tap to move this gift along"
+                      >
+                        {STAGE_LABEL[stage]}
+                      </button>
+                      {stage !== 'toBuy' && (
+                        <button
+                          type="button"
+                          className={gift.checks.needReturn ? 'return-flag is-on' : 'return-flag'}
+                          onClick={() => onUpdateGift(gift.id, { checks: { ...gift.checks, needReturn: !gift.checks.needReturn } })}
+                        >
+                          {gift.checks.needReturn ? '↩ Returning' : 'Return?'}
+                        </button>
+                      )}
+                      <button type="button" className="icon-btn" aria-label={`Delete ${gift.name || 'gift'}`} onClick={() => onDeleteGift(gift.id)}>✕</button>
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {addingGift ? (
+            <form onSubmit={submitGift} className="gift-form">
+              <label>Gift
+                <input autoFocus value={giftName} onChange={(e) => setGiftName(e.target.value)} placeholder="Gift name" />
+              </label>
+              <label>Price
+                <input type="number" min="0" step="0.01" value={giftPrice} onChange={(e) => setGiftPrice(e.target.value)} placeholder="25" />
+              </label>
+              {giftDetails && (
+                <>
+                  <label>Where bought from <OptionalLabel />
+                    <input value={giftStore} onChange={(e) => setGiftStore(e.target.value)} placeholder="Target" />
+                  </label>
+                  <label>Product link <OptionalLabel />
+                    <input value={giftLink} onChange={(e) => setGiftLink(e.target.value)} placeholder="https://…" />
+                  </label>
+                  <label>Barcode number <OptionalLabel />
+                    <input value={giftBarcode} onChange={(e) => setGiftBarcode(e.target.value)} placeholder="Barcode number" inputMode="numeric" />
+                  </label>
+                  <label className="file-label">Photo <OptionalLabel />
+                    <input type="file" accept="image/*" onChange={handlePhoto} />
+                  </label>
+                </>
+              )}
+              {giftPhoto && <img className="gift-photo preview" src={giftPhoto} alt="New gift preview" />}
+              <div className="form-actions">
+                {!giftDetails && (
+                  <button type="button" className="small-btn" onClick={() => setGiftDetails(true)}>+ Store, photo &amp; link</button>
+                )}
+                <button type="button" className="small-btn" onClick={() => { resetGiftForm(); setAddingGift(false) }}>Cancel</button>
+              </div>
+              <button className="primary-btn" type="submit">Add gift</button>
+            </form>
+          ) : (
+            <button type="button" className="add-row-btn subtle" onClick={() => setAddingGift(true)}>+ Add a gift</button>
+          )}
+
+          <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
+
+          <div className="person-footer">
+            <button type="button" className="small-btn danger" onClick={onDelete}>Delete {person.name}</button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
