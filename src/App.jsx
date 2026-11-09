@@ -384,12 +384,13 @@ export default function App() {
       <BackgroundMotif />
       <main className="wrap">
         <header className="topbar">
-          <span>Signed in as {account.name} · {account.email} · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
+          <span>Signed in as {account.name}<em className="topbar-email"> · {account.email}</em> · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
+        <p className="countdown-ribbon"><b>{days}</b> days until Christmas</p>
         {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
 
         {locked && (
@@ -424,7 +425,7 @@ export default function App() {
 
         {overBudget.length > 0 && (
           <section className="over-budget-alert" role="alert">
-            <strong>⚠️ Over budget</strong>
+            <strong>Over budget</strong>
             {overBudget.map(({ person, over }) => (
               <button key={person.id} type="button" className="over-budget-link" onClick={() => jumpToPerson(person.id)}>
                 {person.name} is ${over} over their ${Number(person.budget) || 0} budget — tap to see their list
@@ -496,7 +497,6 @@ export default function App() {
           </p>
         )}
         </>)}
-        <p className="countdown-foot">{days} days until Christmas</p>
         <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
     </div>
@@ -630,7 +630,7 @@ function GiftHelper({ person, spent, onAddGift }) {
   )
 }
 
-const STAGE_LABEL = { toBuy: 'To buy', bought: 'Bought', wrapped: 'Wrapped' }
+const STAGE_LABEL = { toBuy: 'To buy', bought: 'Bought', wrapped: 'Wrapped', given: 'Given' }
 
 function StageIcon({ stage }) {
   if (stage === 'bought') {
@@ -657,7 +657,25 @@ function StageIcon({ stage }) {
   )
 }
 
+const GIFT_STEPS = [
+  { key: 'bought', label: 'Bought' },
+  { key: 'wrapped', label: 'Wrapped' },
+  { key: 'given', label: 'Given' },
+]
+
+// Wrapped and Given both mean it's paid for, so Bought comes along.
+// Unticking Bought clears the rest, so nothing claims to be wrapped but unbought.
+function toggleStep(checks, key, on) {
+  const next = { ...checks, [key]: on }
+  if (on && (key === 'wrapped' || key === 'given')) next.bought = true
+  if (!on && key === 'bought') { next.wrapped = false; next.given = false }
+  next.toBuy = !next.bought
+  if (!next.bought) next.needReturn = false
+  return next
+}
+
 function stageOf(checks) {
+  if (checks.given) return 'given'
   if (checks.wrapped) return 'wrapped'
   if (checks.bought) return 'bought'
   return 'toBuy'
@@ -744,6 +762,12 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
           {budget ? <>${spent} <i>/</i> ${budget}</> : 'Set a budget'}
         </span>
       </button>
+      <div
+        className={over > 0 ? 'person-meter is-over' : budget ? 'person-meter' : 'person-meter is-unset'}
+        aria-hidden="true"
+      >
+        <i style={{ width: budget ? `${Math.min(100, Math.round((spent / budget) * 100))}%` : '0%' }} />
+      </div>
 
       {open && (
         <div className="person-body">
@@ -781,28 +805,20 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
                         {gift.store && <small>{gift.store}</small>}
                       </span>
                       <span className="gift-price">{gift.price === '' ? '' : `$${gift.price}`}</span>
-                      <span className="row-actions">
-                        <button
-                          type="button"
-                          className={gift.checks.needReturn ? 'flag-btn is-on' : 'flag-btn'}
-                          title={gift.checks.needReturn ? 'Marked to return' : 'Mark to return'}
-                          aria-label={gift.checks.needReturn ? 'Marked to return' : 'Mark to return'}
-                          aria-pressed={!!gift.checks.needReturn}
-                          tabIndex={stage === 'toBuy' ? -1 : 0}
-                          aria-hidden={stage === 'toBuy'}
-                          onClick={() => onUpdateGift(gift.id, { checks: { ...gift.checks, needReturn: !gift.checks.needReturn } })}
-                        >↩</button>
-                        <button
-                          type="button"
-                          className={`stage-btn is-${stage}`}
-                          title={`${STAGE_LABEL[stage]} — tap to change`}
-                          aria-label={`${gift.name || 'Gift'}: ${STAGE_LABEL[stage]}. Tap to change.`}
-                          onClick={() => onUpdateGift(gift.id, { checks: checksForStage(gift.checks, nextStage(stage)) })}
-                        >
-                          <StageIcon stage={stage} />
-                        </button>
-                        <button type="button" className="row-x" aria-label={`Delete ${gift.name || 'gift'}`} onClick={() => onDeleteGift(gift.id)}>✕</button>
-                      </span>
+                      <button type="button" className="row-x" aria-label={`Delete ${gift.name || 'gift'}`} onClick={() => onDeleteGift(gift.id)}>✕</button>
+                      <div className="gift-checks">
+                        {stage === 'toBuy' && <span className="need-tag">Need to buy</span>}
+                        {GIFT_STEPS.map(({ key, label }) => (
+                          <label key={key} className={gift.checks[key] ? 'gift-check is-on' : 'gift-check'}>
+                            <input
+                              type="checkbox"
+                              checked={!!gift.checks[key]}
+                              onChange={(e) => onUpdateGift(gift.id, { checks: toggleStep(gift.checks, key, e.target.checked) })}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
                     </li>
                   )
                 })}
