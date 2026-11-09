@@ -360,6 +360,41 @@ button:disabled { opacity: 0.55; cursor: default; filter: none; }
 .person-body { padding: 0 16px 10px 40px; }
 .person-notes { font-size: 0.86rem; color: var(--silver-dim); margin: 0 0 8px; }
 
+/* ---------- Falling snow ---------- */
+/* Real six-pointed flakes, three drifts at different sizes and speeds.
+   The layer is fixed and never swallows a tap. */
+.page::before, .page::after {
+  content: "";
+  position: fixed; left: 0; right: 0; top: -20vh; bottom: -20vh;
+  z-index: 0; pointer-events: none;
+  background-repeat: repeat;
+}
+.page::before {
+  background-image: url("data:image/svg+xml,<svg xmlns='http%3A//www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'><g transform=%22translate%2835 31%29 scale%280.34%29%22 opacity=%220.9%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g><g transform=%22translate%28137 127%29 scale%280.26%29%22 opacity=%220.7%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g></svg>"), url("data:image/svg+xml,<svg xmlns='http%3A//www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'><g transform=%22translate%2827 139%29 scale%280.22%29%22 opacity=%220.75%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g><g transform=%22translate%28151 43%29 scale%280.18%29%22 opacity=%220.6%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g></svg>");
+  background-size: 290px 290px, 205px 205px;
+  animation: snowfall-near 19s linear infinite;
+  opacity: 0.55;
+}
+.page::after {
+  background-image: url("data:image/svg+xml,<svg xmlns='http%3A//www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'><g transform=%22translate%28103 88%29 scale%280.14%29%22 opacity=%220.6%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g><g transform=%22translate%2814 24%29 scale%280.12%29%22 opacity=%220.45%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g><g transform=%22translate%28168.5 168.5%29 scale%280.13%29%22 opacity=%220.5%22><g fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%223.4%22 stroke-linecap=%22round%22><g transform=%22rotate%280 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%2860 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28120 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28180 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28240 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g><g transform=%22rotate%28300 50 50%29%22><path d=%22M50 50 V14 M50 24 l-8 -8 M50 24 l8 -8 M50 35 l-6.5 -6.5 M50 35 l6.5 -6.5%22/></g></g></g></svg>");
+  background-size: 150px 150px;
+  animation: snowfall-far 31s linear infinite;
+  opacity: 0.4;
+}
+@keyframes snowfall-near {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 34px 290px, -26px 205px; }
+}
+@keyframes snowfall-far {
+  from { background-position: 0 0; }
+  to   { background-position: 18px 150px; }
+}
+.page > * { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .page::before, .page::after { animation: none; }
+}
+@media print { .page::before, .page::after { display: none; } }
+
 /* ---------- Green boxes on the red background ---------- */
 .card,
 .summary,
@@ -371,6 +406,46 @@ dialog {
   border: 1px solid var(--gold-line) !important;
   box-shadow: 0 12px 30px rgba(20, 0, 0, 0.34), inset 0 1px 0 rgba(239, 224, 196, 0.1) !important;
 }
+/* ---------- Gold ornaments in the corners of every box ---------- */
+.card, .summary, .list-panel, .welcome-form-panel { position: relative; }
+.card::before, .summary::before, .list-panel::before, .welcome-form-panel::before,
+.card::after, .summary::after, .list-panel::after, .welcome-form-panel::after {
+  content: ""; position: absolute; width: 34px; height: 34px;
+  pointer-events: none; opacity: 0.9;
+  border: 0 solid var(--gold-soft);
+}
+/* They trace the frame's own corners, so they never sit on the words. */
+.card::before, .summary::before, .list-panel::before, .welcome-form-panel::before {
+  top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px;
+  border-top-left-radius: inherit;
+}
+.card::after, .summary::after, .list-panel::after, .welcome-form-panel::after {
+  bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px;
+  border-bottom-right-radius: inherit;
+}
+/* A small ornament hanging from the top corner of the people list. */
+.list-panel { box-shadow: 0 14px 34px rgba(20, 0, 0, 0.38), 0 0 0 1px rgba(216, 178, 106, 0.18),
+  inset 0 1px 0 rgba(239, 224, 196, 0.12) !important; }
+
+/* ---------- A soft sparkle on the gold ---------- */
+.wrap > h1, .welcome-intro h1 {
+  background-image: linear-gradient(104deg,
+    #b8893a 0%, #d9b36a 26%, #fbf1d8 42%, #d9b36a 58%, #b8893a 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldshine 7.5s ease-in-out infinite;
+}
+@keyframes goldshine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrap > h1, .welcome-intro h1 { animation: none; }
+}
+.summary strong { text-shadow: 0 0 18px rgba(216, 178, 106, 0.3); }
+.gift-check.is-on { box-shadow: 0 0 12px rgba(216, 178, 106, 0.28); }
+
 .person-block + .person-block { border-top: 1px solid rgba(239, 224, 196, 0.16); }
 .person-block.is-open { background: rgba(0, 0, 0, 0.18); }
 .person-row:hover { background: rgba(239, 224, 196, 0.09); }
@@ -671,7 +746,7 @@ dialog {
 .welcome-form-panel .tab { border:0; border-radius:0; background:transparent; color:#f2e4cc; padding:5px 0 16px; font-size:clamp(17px,1.6vw,24px); font-weight:500; flex:1; white-space:nowrap; }
 .welcome-form-panel .tab.active { border-bottom:4px solid #dcbe74; }
 .welcome-form-panel label { display:block; font-size:clamp(17px,1.55vw,23px); font-weight:500; margin:0 0 18px; color:#f6e9d7; }
-.welcome-form-panel input { width:100%; box-sizing:border-box; display:block; margin-top:5px; background:var(--candy); color:#efe0c4; border:1px solid #cba855; border-radius:12px; padding:12px 16px; font-size:19px; min-height:52px; }
+.welcome-form-panel input { width:100%; box-sizing:border-box; display:block; margin-top:5px; background:rgba(4,26,12,0.52); color:#efe0c4; border:1px solid #cba855; border-radius:12px; padding:12px 16px; font-size:19px; min-height:52px; }
 .welcome-submit { display:block; width:100%; margin-top:28px; border-radius:14px; padding:12px 10px; }
 .welcome-fine-print { text-align:center; color:#f2e4ce; font-size:18px; line-height:1.4; margin:24px 0 4px; }
 .welcome-footer { display:flex; align-items:center; gap:14px; justify-content:center; white-space:nowrap; font-size:17px; margin:auto 0 0; padding:50px 0 28px; color:#efe0c4; }
@@ -681,7 +756,7 @@ dialog {
 .welcome-subscribe:hover,.welcome-submit:hover { filter:brightness(1.08); }
 @media(max-width:1050px) and (min-width:701px) { .welcome-layout { grid-template-columns:1fr 1fr; padding:32px 5% 0; } .welcome-account { grid-column:2; grid-row:1 / span 2; padding-top:20px; } .welcome-offer { grid-column:1; width:100%; margin-top:5px; } .welcome-tree { width:100%; max-height:300px; object-fit:contain; margin:0; } .welcome-price strong { font-size:60px; } .welcome-intro h1 { font-size:76px; } }
 @media(max-width:700px) { .welcome-layout { grid-template-columns:1fr; padding:28px 22px 0; gap:12px; max-width:520px; } .welcome-intro { padding-right:45%; min-height:225px; } .welcome-intro h1 { font-size:55px; margin-bottom:18px; } .welcome-subtitle { font-size:18px; } .welcome-description { font-size:15px; } .welcome-tree { position:absolute; width:46%; right:-8%; bottom:-10px; margin:0; } .welcome-offer { width:min(100%,360px); justify-self:center; margin:4px 0 0; } .welcome-price strong { font-size:64px; } .welcome-price span { font-size:25px; } .welcome-subscribe { font-size:20px; padding:8px 25px; margin-top:14px; } .welcome-account { padding-top:0; } .welcome-form-panel { padding:22px; border-radius:24px; } .welcome-form-panel .tab { font-size:19px; } .welcome-submit { font-size:22px; } .welcome-footer { padding:32px 0 24px; font-size:15px; } }
-.welcome-form-panel input::placeholder { color:#e9d8b4; opacity:0.75; }
+.welcome-form-panel input::placeholder { color:#cdbf9e; opacity:0.8; }
 @media(min-width:1051px) { .welcome-tree { height:clamp(340px,48vh,540px); object-fit:contain; object-position:left bottom; } .welcome-price { top:35%; } .welcome-price strong { font-size:clamp(52px,5.8vw,90px); } }
 .forgot-link { display:block; margin:14px auto 0; background:none; border:none; color:#dcbe74; text-decoration:underline; font-family:inherit; font-size:17px; cursor:pointer; }
 .forgot-link:hover { color:#efe0c4; }
