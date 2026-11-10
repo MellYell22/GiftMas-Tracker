@@ -4,44 +4,6 @@ import { supabase } from './supabase'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
 const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
-const WELCOME_LAYOUT_CSS = `
-/* Welcome screen layout cleanup — sign-up box up top on phones, tidy columns on computers. */
-.welcome-layout { align-items:center; }
-.welcome-account { padding-top:0; align-self:center; }
-.welcome-footer { margin-top:28px; display:block; text-align:center; white-space:normal; line-height:1.5; padding:0 0 24px; }
-.welcome-footer::before, .welcome-footer::after { display:none; }
-.check-email h2 { font:normal 30px/1.1 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; color:#e4cb8c; }
-.check-email p, .check-email li { color:#f6e9d7; font-size:17px; line-height:1.45; }
-.check-email strong { color:#f2e3bd; }
-.check-email .forgot-link { display:block; margin:14px auto 0; }
-.welcome-submit:disabled, .check-email .forgot-link:disabled { opacity:.6; cursor:default; }
-@media (min-width:1051px) {
-  .welcome-layout { padding-top:28px; padding-bottom:28px; }
-  .welcome-tree { height:clamp(300px,44vh,480px); }
-}
-@media (max-width:700px) {
-  .welcome-layout { display:flex; flex-direction:column; align-items:stretch; gap:18px; padding:22px 18px 0; max-width:480px; margin:0 auto; min-height:0; }
-  .welcome-intro { order:1; padding-right:0; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 92px; column-gap:12px; align-items:center; }
-  .welcome-intro h1 { grid-column:1; font-size:46px; margin:0 0 10px; }
-  .welcome-divider { grid-column:1; width:100%; margin:0 0 10px; }
-  .welcome-subtitle { grid-column:1; font-size:16px; margin:0; }
-  .welcome-tree { grid-column:2; grid-row:1 / span 3; position:static; width:92px; height:auto; margin:0; align-self:end; }
-  .welcome-description { grid-column:1 / -1; font-size:14.5px; margin-top:12px; text-align:center; }
-  .welcome-account { display:contents; }
-  .welcome-form-panel { order:2; padding:18px 18px 20px; }
-  .welcome-form-panel .auth-tabs { margin-bottom:18px; }
-  .welcome-form-panel label { margin-bottom:12px; font-size:17px; }
-  .welcome-form-panel input { min-height:46px; padding:10px 14px; font-size:16px; }
-  .welcome-submit { margin-top:16px; font-size:20px; }
-  .welcome-fine-print { font-size:15px; margin:14px 0 0; }
-  .welcome-offer { order:3; width:min(100%,280px); align-self:center; margin:0; }
-  .welcome-price strong { font-size:46px; }
-  .welcome-price span { font-size:19px; }
-  .welcome-subscribe { font-size:17px; padding:7px 22px; margin-top:10px; }
-  .welcome-footer { order:4; margin-top:0; padding:8px 0 24px; font-size:14px; }
-}
-`
-
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -446,14 +408,12 @@ export default function App() {
   if (!account) {
     return (
       <div className="page welcome-page">
-        <style>{WELCOME_LAYOUT_CSS}</style>
         <main className="welcome-layout">
           <section className="welcome-intro">
-            <h1>Giftmas<br />Tracker</h1>
+            <h1>Giftmas <br />Tracker</h1>
             <div className="welcome-divider" aria-hidden="true" />
             <p className="welcome-subtitle">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
             <p className="welcome-description">Set a budget for everyone on your list and track each gift from bought to wrapped. Your AI Gift Shopper Helper suggests thoughtful gifts based on your loved ones’ interests, wishes, and your remaining budget.</p>
-            <img className="welcome-tree" src="/christmas-tree.png" alt="Christmas tree decorated with red bows, golden ornaments and warm lights, surrounded by wrapped presents" />
           </section>
           <section className="welcome-offer" aria-label="Yearly subscription">
             <img className="welcome-wreath" src="/christmas-wreath.png" alt="" />
@@ -509,8 +469,9 @@ export default function App() {
               </>)}
               <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
             </div>
-            <footer className="welcome-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
           </section>
+          <img className="welcome-tree" src="/christmas-tree.png" alt="" aria-hidden="true" />
+          <footer className="welcome-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
         </main>
       </div>
     )

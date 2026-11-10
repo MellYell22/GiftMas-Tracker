@@ -722,42 +722,95 @@ dialog {
   .app-footer::before { background: #d8c9a0; }
 }
 
-/* Approved Christmas welcome composition. Scoped to the welcome screen. */
+/* ===========================================================
+   Welcome screen
+   Three calm columns on a laptop — story, offer, account — with
+   their tops on one line. The tree is decoration in a corner and
+   never takes up room. On a phone the account box comes straight
+   after the title so it shows without scrolling.
+   =========================================================== */
 .welcome-page { min-height:100svh; padding:0; background:radial-gradient(ellipse at 48% 25%,#a71413 0%,#850807 48%,#550400 100%); color:#efe0c4; overflow:hidden; }
-.welcome-layout { max-width:1600px; min-height:100svh; margin:auto; padding:42px 3.6% 0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(320px,1fr); gap:18px; align-items:start; position:relative; }
-.welcome-intro { position:relative; min-width:0; }
-.welcome-intro h1 { font:normal clamp(64px,6.6vw,104px)/.9 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; text-align:left; margin:0 0 24px; letter-spacing:-.03em; text-shadow:none; background:linear-gradient(104deg,#c9a253 0%,#e4cb8c 26%,#f2e3bd 42%,#d4ad5c 58%,#a8812a 100%); -webkit-background-clip:text; background-clip:text; color:#dcbe74; -webkit-text-fill-color:transparent; }
-.welcome-divider { height:2px; background:linear-gradient(90deg,transparent,#c09a41 18%,#d6b55e 80%,transparent); margin:0 0 15px; width:94%; }
-.welcome-subtitle { font-size:clamp(20px,2.2vw,33px); line-height:1.25; margin:0 0 18px; font-weight:500; text-wrap:balance; }
-.welcome-description { font-size:clamp(16px,1.5vw,22px); line-height:1.4; margin:0; color:#f6e9d2; }
-.welcome-tree { width:148%; max-width:none; display:block; margin:8px 0 0 -15%; position:relative; pointer-events:none; }
-.welcome-offer { position:relative; aspect-ratio:1/1.12; min-width:0; }
-.welcome-wreath { width:112%; height:112%; object-fit:contain; position:absolute; top:-5%; left:-6%; pointer-events:none; }
-.welcome-price { position:absolute; inset:30% 13% auto; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.welcome-layout { position:relative; box-sizing:border-box; width:100%; max-width:1480px; min-height:100svh; margin:0 auto; padding:clamp(26px,calc((100svh - 640px) / 2),120px) clamp(28px,4vw,64px) 0; display:grid; grid-template-columns:minmax(0,.82fr) minmax(0,1fr) minmax(330px,380px); grid-template-rows:1fr auto; column-gap:clamp(22px,2.6vw,48px); align-items:start; }
+.welcome-intro, .welcome-offer, .welcome-account, .welcome-footer { position:relative; z-index:1; min-width:0; }
+
+/* Story */
+.welcome-intro h1 { font:normal clamp(58px,5.7vw,92px)/.92 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; text-align:left; margin:0 0 22px; letter-spacing:-.03em; text-shadow:none; background:linear-gradient(104deg,#c9a253 0%,#e4cb8c 26%,#f2e3bd 42%,#d4ad5c 58%,#a8812a 100%); -webkit-background-clip:text; background-clip:text; color:#dcbe74; -webkit-text-fill-color:transparent; }
+.welcome-divider { height:2px; width:100%; max-width:360px; margin:0 0 16px; background:linear-gradient(90deg,#c09a41,#d6b55e 60%,transparent); }
+.welcome-subtitle { font-size:clamp(20px,1.75vw,27px); line-height:1.25; margin:0 0 16px; font-weight:500; text-wrap:balance; }
+.welcome-description { font-size:clamp(16px,1.25vw,19px); line-height:1.5; margin:0; max-width:30em; color:#f6e9d2; text-wrap:pretty; }
+
+/* The tree is scenery: tucked into the lower-left corner, behind everything. */
+.welcome-tree { position:absolute; z-index:0; left:-14px; bottom:0; height:clamp(200px,35vh,380px); width:auto; max-width:none; margin:0; display:block; pointer-events:none; user-select:none; }
+
+/* Offer — sized from its own width so the price always fits the wreath. */
+.welcome-offer { container-type:inline-size; width:100%; max-width:470px; justify-self:center; aspect-ratio:1/1.08; margin-top:-22px; }
+.welcome-wreath { width:112%; height:112%; object-fit:contain; position:absolute; top:-6%; left:-6%; pointer-events:none; }
+.welcome-price { position:absolute; inset:36% 13% auto; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .welcome-price::before { content:""; position:absolute; inset:-14% -10% -16%; border-radius:50%; z-index:-1;
-  background:radial-gradient(ellipse at center, rgba(61,5,3,0.82) 0%, rgba(61,5,3,0.66) 52%, rgba(61,5,3,0) 76%); }
-.welcome-price strong { font:normal clamp(52px,6.4vw,98px)/1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; white-space:nowrap; color:#f6e9d7; text-shadow:0 2px 14px rgba(40,0,0,0.75); }
-.welcome-price span { font-size:clamp(21px,2.5vw,36px); line-height:1.3; }
-.welcome-subscribe,.welcome-submit { border:1px solid #d9bc72; background:linear-gradient(#e2c47c,#a8812a); color:#5b0905; text-decoration:none; font-family:inherit; font-size:clamp(18px,1.8vw,27px); font-weight:650; border-radius:20px; padding:10px 28px; box-shadow:0 3px 9px #3f00002b; cursor:pointer; }
-.welcome-subscribe { margin-top:20px; }
-.welcome-account { padding-top:74px; min-width:0; align-self:stretch; display:flex; flex-direction:column; }
-.welcome-form-panel { border:2px solid #cba855; border-radius:30px; padding:24px 30px 28px; background:#63030055; }
-.welcome-form-panel .auth-tabs { margin:0 0 28px; gap:12px; display:flex; border-bottom:1px solid #cda742; }
-.welcome-form-panel .tab { border:0; border-radius:0; background:transparent; color:#f2e4cc; padding:5px 0 16px; font-size:clamp(17px,1.6vw,24px); font-weight:500; flex:1; white-space:nowrap; }
-.welcome-form-panel .tab.active { border-bottom:4px solid #dcbe74; }
-.welcome-form-panel label { display:block; font-size:clamp(17px,1.55vw,23px); font-weight:500; margin:0 0 18px; color:#f6e9d7; }
-.welcome-form-panel input { width:100%; box-sizing:border-box; display:block; margin-top:5px; background:rgba(4,26,12,0.52); color:#efe0c4; border:1px solid #cba855; border-radius:12px; padding:12px 16px; font-size:19px; min-height:52px; }
-.welcome-submit { display:block; width:100%; margin-top:28px; border-radius:14px; padding:12px 10px; }
-.welcome-fine-print { text-align:center; color:#f2e4ce; font-size:18px; line-height:1.4; margin:24px 0 4px; }
-.welcome-footer { display:flex; align-items:center; gap:14px; justify-content:center; white-space:nowrap; font-size:17px; margin:auto 0 0; padding:50px 0 28px; color:#efe0c4; }
-@media(max-width:860px){ .welcome-footer { white-space:normal; text-align:center; line-height:1.5; } .welcome-footer::before,.welcome-footer::after { display:none; } }
-.welcome-footer::before,.welcome-footer::after { content:""; flex:1; height:1px; background:#be9a3e; }
+  background:radial-gradient(closest-side, rgba(74,4,2,0.82) 0%, rgba(74,4,2,0.55) 60%, transparent 100%); }
+.welcome-price strong { font:normal 60px/1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; font-size:19cqw; white-space:nowrap; color:#f6e9d7; text-shadow:0 2px 14px rgba(40,0,0,0.75); }
+.welcome-price span { font-size:24px; font-size:7.4cqw; line-height:1.3; }
+.welcome-subscribe,.welcome-submit { border:1px solid #d9bc72; background:linear-gradient(#e2c47c,#a8812a); color:#5b0905; text-decoration:none; font-family:inherit; font-weight:650; box-shadow:0 3px 9px #3f00002b; cursor:pointer; }
+.welcome-subscribe { margin-top:4cqw; font-size:19px; font-size:max(16px,5.2cqw); border-radius:999px; padding:.42em 1.5em; }
+
+/* Account */
+.welcome-form-panel { border:2px solid #cba855; border-radius:26px; padding:20px 26px 22px; background:#63030055; }
+.welcome-form-panel .auth-tabs { margin:0 0 18px; gap:12px; display:flex; border-bottom:1px solid #cda742; }
+.welcome-form-panel .tab { border:0; border-radius:0; background:transparent; color:#f2e4cc; padding:4px 0 12px; font-size:19px; font-weight:500; flex:1; white-space:nowrap; border-bottom:3px solid transparent; margin-bottom:-1px; }
+.welcome-form-panel .tab.active { border-bottom-color:#dcbe74; }
+.welcome-form-panel label { display:block; font-size:17px; font-weight:500; margin:0 0 12px; color:#f6e9d7; }
+.welcome-form-panel input { width:100%; box-sizing:border-box; display:block; margin-top:5px; background:rgba(4,26,12,0.52); color:#efe0c4; border:1px solid #cba855; border-radius:12px; padding:10px 14px; font-size:17px; min-height:46px; }
+.welcome-form-panel input::placeholder { color:#cdbf9e; opacity:0.8; }
+.welcome-submit { display:block; width:100%; margin-top:18px; border-radius:14px; padding:11px 10px; font-size:20px; }
+.welcome-submit:disabled, .check-email .forgot-link:disabled { opacity:.6; cursor:default; }
+.welcome-fine-print { text-align:center; color:#f2e4ce; font-size:15.5px; line-height:1.4; margin:14px 0 0; }
+.check-email h2 { font:normal 30px/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; color:#e4cb8c; }
+.check-email p, .check-email li { color:#f6e9d7; font-size:17px; line-height:1.45; }
+.check-email strong { color:#f2e3bd; }
+.check-email .forgot-link { display:block; margin:14px auto 0; }
+
+/* Signature */
+.welcome-footer { grid-column:1 / -1; justify-self:center; text-align:center; font-size:15.5px; line-height:1.55; color:#efe0c4; margin:0; padding:22px 0 20px; }
+.welcome-footer::before { content:""; display:block; width:min(280px,60vw); height:1px; margin:0 auto 12px; background:linear-gradient(90deg,transparent,#be9a3e 30%,#be9a3e 70%,transparent); }
+
 .welcome-page a:focus-visible,.welcome-page button:focus-visible,.welcome-page input:focus-visible { outline:3px solid #fff1a5; outline-offset:4px; }
 .welcome-subscribe:hover,.welcome-submit:hover { filter:brightness(1.08); }
-@media(max-width:1050px) and (min-width:701px) { .welcome-layout { grid-template-columns:1fr 1fr; padding:32px 5% 0; } .welcome-account { grid-column:2; grid-row:1 / span 2; padding-top:20px; } .welcome-offer { grid-column:1; width:100%; margin-top:5px; } .welcome-tree { width:100%; max-height:300px; object-fit:contain; margin:0; } .welcome-price strong { font-size:60px; } .welcome-intro h1 { font-size:76px; } }
-@media(max-width:700px) { .welcome-layout { grid-template-columns:1fr; padding:28px 22px 0; gap:12px; max-width:520px; } .welcome-intro { padding-right:45%; min-height:225px; } .welcome-intro h1 { font-size:55px; margin-bottom:18px; } .welcome-subtitle { font-size:18px; } .welcome-description { font-size:15px; } .welcome-tree { position:absolute; width:46%; right:-8%; bottom:-10px; margin:0; } .welcome-offer { width:min(100%,360px); justify-self:center; margin:4px 0 0; } .welcome-price strong { font-size:64px; } .welcome-price span { font-size:25px; } .welcome-subscribe { font-size:20px; padding:8px 25px; margin-top:14px; } .welcome-account { padding-top:0; } .welcome-form-panel { padding:22px; border-radius:24px; } .welcome-form-panel .tab { font-size:19px; } .welcome-submit { font-size:22px; } .welcome-footer { padding:32px 0 24px; font-size:15px; } }
-.welcome-form-panel input::placeholder { color:#cdbf9e; opacity:0.8; }
-@media(min-width:1051px) { .welcome-tree { height:clamp(340px,48vh,540px); object-fit:contain; object-position:left bottom; } .welcome-price { top:35%; } .welcome-price strong { font-size:clamp(52px,5.8vw,90px); } }
+
+/* Very short laptop windows: the tree bows out rather than crowd the words. */
+@media (min-width:1051px) and (max-height:640px) { .welcome-tree { display:none; } }
+
+/* Tablet: story and offer stacked on the left, account on the right. */
+@media (max-width:1050px) and (min-width:701px) {
+  .welcome-layout { grid-template-columns:minmax(0,1fr) minmax(320px,380px); grid-template-rows:auto 1fr auto; padding:32px 32px 0; column-gap:32px; row-gap:8px; }
+  .welcome-intro { grid-column:1; grid-row:1; }
+  .welcome-offer { grid-column:1; grid-row:2; max-width:340px; margin-top:0; justify-self:start; align-self:start; }
+  .welcome-account { grid-column:2; grid-row:1 / span 2; }
+  .welcome-intro h1 { font-size:68px; }
+  .welcome-tree { left:auto; right:-10px; height:clamp(190px,24vh,260px); }
+}
+
+/* Phone: title, then the account box, then the offer. */
+@media (max-width:700px) {
+  .welcome-layout { grid-template-columns:minmax(0,1fr) 96px; grid-template-rows:none; column-gap:12px; row-gap:0; align-items:center; max-width:480px; min-height:0; padding:18px 18px 0; }
+  .welcome-intro, .welcome-account { display:contents; }
+  .welcome-intro h1, .welcome-divider, .welcome-subtitle, .welcome-form-panel, .welcome-offer, .welcome-footer { grid-column:1 / -1; }
+  .welcome-intro h1 { order:1; font-size:clamp(36px,11.6vw,48px); line-height:1; text-align:center; margin:0 0 10px; }
+  .welcome-intro h1 br { display:none; }
+  .welcome-divider { order:2; max-width:220px; margin:0 auto 9px; background:linear-gradient(90deg,transparent,#d6b55e 30%,#d6b55e 70%,transparent); }
+  .welcome-subtitle { order:3; font-size:17px; text-align:center; margin:0 0 14px; }
+  .welcome-form-panel { order:4; position:relative; z-index:1; padding:14px 18px 16px; border-radius:22px; }
+  .welcome-form-panel .auth-tabs { margin-bottom:12px; }
+  .welcome-form-panel .tab { font-size:18px; padding:2px 0 9px; }
+  .welcome-form-panel label { font-size:16px; margin-bottom:9px; }
+  .welcome-form-panel input { min-height:44px; padding:9px 13px; font-size:16px; margin-top:3px; }
+  .welcome-submit { margin-top:13px; font-size:19px; padding:10px; }
+  .welcome-fine-print { font-size:14.5px; margin-top:10px; }
+  .welcome-offer { order:5; max-width:290px; margin:18px auto 0; }
+  .welcome-description { order:6; grid-column:1; font-size:15px; line-height:1.5; margin:10px 0 0; }
+  .welcome-tree { order:6; grid-column:2; position:static; width:112px; height:auto; margin:10px -16px 0 0; justify-self:end; align-self:end; }
+  .welcome-footer { order:7; font-size:14px; padding:18px 0 22px; }
+}
+
 .forgot-link { display:block; margin:14px auto 0; background:none; border:none; color:#dcbe74; text-decoration:underline; font-family:inherit; font-size:17px; cursor:pointer; }
 .forgot-link:hover { color:#efe0c4; }
 .feedback-line { font-size: 0.82em; opacity: 0.92; }
