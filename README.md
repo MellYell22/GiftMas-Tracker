@@ -61,10 +61,39 @@ Account: **Double AA Designs** (live)
 - Payment Link (live, active): https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00
   (`plink_1UY9l7LxgEPijLi3lqaCVM5o`)
 
-The app's **Subscribe — $19.99/year** button links to that Payment Link.
-Paying through the link creates the Stripe subscription; it does not by
-itself unlock anything inside the app yet — account/payment wiring is a
-later step (see below).
+### How a payment unlocks an account
+
+1. The signed-in customer taps **Subscribe — $19.99/year**. The app calls the
+   Edge Function `giftmas-create-checkout` with the customer's Supabase
+   session. Nothing in the request names a user or a price.
+2. The function resolves the account from the session token, requires a
+   confirmed email, checks the price is the $19.99 yearly price, and creates a
+   Stripe Checkout Session stamped with that account's id.
+3. Stripe sends signed events to `giftmas-stripe-webhook`, which records the
+   subscription in `giftmas_subscriptions` for that account. Renewals, failed
+   payments and cancellations update the same row. Each event is handled once
+   (`giftmas_stripe_events`).
+4. The app's access check (`giftmas_has_access`) sees the row and opens the
+   tracker. A payment that cannot be matched to an account is written to
+   `giftmas_payment_issues` and never unlocks anything.
+
+The Payment Link above is no longer used by the app. The webhook still accepts
+it, but only with a valid account reference and a matching email.
+
+Sandbox copies (`giftmas-test-create-checkout`, `giftmas-test-stripe-webhook`,
+`giftmas_test_subscriptions`, `giftmas_test_lists`) are used when the app is
+built with `VITE_GIFTMAS_STRIPE_MODE=test`. Sandbox and live never share
+keys, tables or entitlement.
+
+Edge Function secrets (set in Supabase, never in Git or Vite):
+
+- `GIFTMAS_STRIPE_SECRET_KEY`: live key, used by the live functions only.
+- `GIFTMAS_STRIPE_TEST_SECRET_KEY`: sandbox key, used by the sandbox
+  functions only. A key of the wrong mode is refused.
+- `GIFTMAS_ALLOWED_ORIGINS` (optional): extra site addresses, comma separated,
+  allowed as the return address after checkout.
+
+Payment logic tests: `npm test`.
 
 ## Supabase connection
 
@@ -86,9 +115,8 @@ trusted device, because legacy local storage was not protected authentication.
 
 - Verify account confirmation and password-reset emails on the final deployed
   domain after configuring Supabase redirect URLs.
-- Stripe verification is still separate: the existing client-side unlock button
-  and URL flag do not prove payment. Add server-verified subscription status
-  before relying on the subscription gate for paid access.
+- Run the full sandbox purchase check, then the same check in live, before
+  relying on the subscription gate (see docs/secure-checkout-draft.md).
 - The gift helper remains the existing local rules-based helper.
 
 Validation: production build, lint (warnings only), database insert/update and

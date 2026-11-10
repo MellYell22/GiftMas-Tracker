@@ -29,3 +29,22 @@ Status: DRAFT ONLY. Do not merge or deploy until owner preview and end-to-end sa
 
 ## Important
 The sandbox and live Stripe accounts use different secrets, prices, and webhook endpoints. Never swap them blindly. A new edge function needs an authenticated deployment and Stripe secret configuration before an actual sandbox end-to-end test is possible.
+
+## Implementation status (2026-11-10)
+
+Root cause, confirmed from the Supabase function logs: Stripe's sandbox delivered
+the paid `checkout.session.completed` event to `giftmas-test-stripe-webhook`
+with a valid signature, and the function answered 422 because the session had
+no account reference. Nothing was stored, so nothing unlocked.
+
+Implemented on this branch (not deployed):
+- `supabase/functions/_shared/giftmas-core.ts`: checkout and webhook logic.
+- `supabase/functions/_shared/giftmas-store.ts`, `giftmas-serve.ts`: database and runtime wiring.
+- Four entrypoints: `giftmas-create-checkout`, `giftmas-test-create-checkout`,
+  `giftmas-stripe-webhook`, `giftmas-test-stripe-webhook`.
+- `supabase/migrations/20261110150000_giftmas_account_linked_checkout.sql` (additive).
+- `src/App.jsx`: the Subscribe button requests a server-made checkout page.
+- `tests/giftmas-core.test.ts`: 20 tests, all passing.
+
+Still required before launch: deploy the sandbox functions and migration, set
+`GIFTMAS_STRIPE_TEST_SECRET_KEY`, and run the real sandbox purchase end to end.

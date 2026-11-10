@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from './supabase'
 
-const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
+// Stripe mode. Live unless a preview build sets VITE_GIFTMAS_STRIPE_MODE=test, which
+// points checkout, the access check and the saved list at the sandbox copies so a
+// test payment can never unlock or alter a real account.
+const SANDBOX = import.meta.env.VITE_GIFTMAS_STRIPE_MODE === 'test'
+const CHECKOUT_FUNCTION = SANDBOX ? 'giftmas-test-create-checkout' : 'giftmas-create-checkout'
+const ACCESS_RPC = SANDBOX ? 'giftmas_test_has_access' : 'giftmas_has_access'
+const LIST_TABLE = SANDBOX ? 'giftmas_test_lists' : 'gift_lists'
 const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
 const dataKey = (email) => `christmas-app-data-${email}`
 
@@ -83,7 +89,10 @@ export default function App() {
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && ADMIN_EMAILS.includes((account.email || '').toLowerCase())
   const locked = !!account && (accessUser !== user.id || !subscribed)
-  const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
+  const [checkoutBusy, setCheckoutBusy] = useState(false)
+  // Just back from Stripe: check access every couple of seconds until it opens.
+  const [justPaid, setJustPaid] = useState(() => new URLSearchParams(window.location.search).get('checkout') === 'success')
+  const justPaidRef = useRef(justPaid)
   const days = daysUntilChristmas()
   const saveTone = /not saved|could not/i.test(cloudMessage)
     ? ' is-error'
@@ -102,7 +111,7 @@ export default function App() {
       if (inFlight) return
       inFlight = true
       try {
-        const { data, error } = await supabase.rpc('giftmas_has_access', { p_user_id: uid })
+        const { data, error } = await supabase.rpc(ACCESS_RPC, { p_user_id: uid })
         if (cancelled) return
         setAccessUser(uid)
         setSubscribed(!error && data === true)
@@ -116,14 +125,54 @@ export default function App() {
       } finally { inFlight = false }
     }
     checkAccess()
-    const timer = window.setInterval(checkAccess, 10000)
+    let timer = 0
+    const tick = () => { timer = window.setTimeout(() => { checkAccess(); tick() }, justPaidRef.current ? 2500 : 10000) }
+    tick()
     window.addEventListener('focus', checkAccess)
     return () => {
       cancelled = true
-      window.clearInterval(timer)
+      window.clearTimeout(timer)
       window.removeEventListener('focus', checkAccess)
     }
   }, [user?.id, accessRetry])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has('checkout')) return
+    params.delete('checkout')
+    const rest = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash)
+  }, [])
+
+  useEffect(() => {
+    justPaidRef.current = justPaid
+    if (!justPaid) return
+    if (subscribed) { setJustPaid(false); return }
+    const t = window.setTimeout(() => setJustPaid(false), 120000)
+    return () => window.clearTimeout(t)
+  }, [justPaid, subscribed])
+
+  // The checkout page is created on the server for the signed-in account, so the
+  // payment is tied to this account before Stripe ever sees it.
+  async function handleSubscribe(e) {
+    e.preventDefault()
+    if (checkoutBusy) return
+    setCheckoutBusy(true)
+    setAccessMessage('Opening secure checkout…')
+    try {
+      const { data, error } = await supabase.functions.invoke(CHECKOUT_FUNCTION, { body: {} })
+      if (error) {
+        let message = ''
+        try { message = (await error.context?.json())?.error || '' } catch { /* keep the default below */ }
+        throw new Error(message)
+      }
+      if (data?.alreadySubscribed) { handleUnlock(); return }
+      if (!data?.url) throw new Error('')
+      window.location.assign(data.url)
+    } catch (error) {
+      setAccessMessage(error?.message || 'Could not start checkout. Please try again.')
+    } finally { setCheckoutBusy(false) }
+  }
 
   function handleUnlock() {
     setAccessMessage('Checking subscription…')
@@ -168,7 +217,7 @@ export default function App() {
     setCloudMessage('Loading your saved list…')
     async function load() {
       await saveQueue.current
-      const { data, error } = await supabase.from('gift_lists').select('people').eq('user_id', user.id).maybeSingle()
+      const { data, error } = await supabase.from(LIST_TABLE).select('people').eq('user_id', user.id).maybeSingle()
       if (cancelled) return
       if (error) { setCloudMessage('Could not load your list — please retry.'); return }
       const existing = data?.people || []
@@ -188,7 +237,7 @@ export default function App() {
     let cancelled = false
     setCloudMessage('Saving…')
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
-      const { error } = await supabase.from('gift_lists').upsert({ user_id: user.id, people })
+      const { error } = await supabase.from(LIST_TABLE).upsert({ user_id: user.id, people })
       if (cancelled) return
       if (error) { setCloudMessage('Not saved yet — keep this page open and retry.'); return }
       lastSaved.current = serialized
@@ -489,7 +538,7 @@ export default function App() {
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
         <p className="countdown-ribbon"><b>{days}</b> days until Christmas</p>
-        {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
+        {locked && <a className="subscribe-btn" href="#subscribe" role="button" aria-busy={checkoutBusy} onClick={handleSubscribe}>Subscribe — $19.99/year</a>}
 
         {locked && (
           <section className="card">
