@@ -3,7 +3,45 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
-const OWNER_EMAIL = 'contact@aa-designs.com'
+const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
+const WELCOME_LAYOUT_CSS = `
+/* Welcome screen layout cleanup — sign-up box up top on phones, tidy columns on computers. */
+.welcome-layout { align-items:center; }
+.welcome-account { padding-top:0; align-self:center; }
+.welcome-footer { margin-top:28px; display:block; text-align:center; white-space:normal; line-height:1.5; padding:0 0 24px; }
+.welcome-footer::before, .welcome-footer::after { display:none; }
+.check-email h2 { font:normal 30px/1.1 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; color:#e4cb8c; }
+.check-email p, .check-email li { color:#f6e9d7; font-size:17px; line-height:1.45; }
+.check-email strong { color:#f2e3bd; }
+.check-email .forgot-link { display:block; margin:14px auto 0; }
+.welcome-submit:disabled, .check-email .forgot-link:disabled { opacity:.6; cursor:default; }
+@media (min-width:1051px) {
+  .welcome-layout { padding-top:28px; padding-bottom:28px; }
+  .welcome-tree { height:clamp(300px,44vh,480px); }
+}
+@media (max-width:700px) {
+  .welcome-layout { display:flex; flex-direction:column; align-items:stretch; gap:18px; padding:22px 18px 0; max-width:480px; margin:0 auto; min-height:0; }
+  .welcome-intro { order:1; padding-right:0; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 92px; column-gap:12px; align-items:center; }
+  .welcome-intro h1 { grid-column:1; font-size:46px; margin:0 0 10px; }
+  .welcome-divider { grid-column:1; width:100%; margin:0 0 10px; }
+  .welcome-subtitle { grid-column:1; font-size:16px; margin:0; }
+  .welcome-tree { grid-column:2; grid-row:1 / span 3; position:static; width:92px; height:auto; margin:0; align-self:end; }
+  .welcome-description { grid-column:1 / -1; font-size:14.5px; margin-top:12px; text-align:center; }
+  .welcome-account { display:contents; }
+  .welcome-form-panel { order:2; padding:18px 18px 20px; }
+  .welcome-form-panel .auth-tabs { margin-bottom:18px; }
+  .welcome-form-panel label { margin-bottom:12px; font-size:17px; }
+  .welcome-form-panel input { min-height:46px; padding:10px 14px; font-size:16px; }
+  .welcome-submit { margin-top:16px; font-size:20px; }
+  .welcome-fine-print { font-size:15px; margin:14px 0 0; }
+  .welcome-offer { order:3; width:min(100%,280px); align-self:center; margin:0; }
+  .welcome-price strong { font-size:46px; }
+  .welcome-price span { font-size:19px; }
+  .welcome-subscribe { font-size:17px; padding:7px 22px; margin-top:10px; }
+  .welcome-footer { order:4; margin-top:0; padding:8px 0 24px; font-size:14px; }
+}
+`
+
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -64,6 +102,10 @@ export default function App() {
   const [showReset, setShowReset] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [resetMessage, setResetMessage] = useState('')
+  const [awaitingEmail, setAwaitingEmail] = useState('')
+  const [awaitingNote, setAwaitingNote] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const [subscribed, setSubscribed] = useState(false)
   const [accessUser, setAccessUser] = useState('')
   const [accessMessage, setAccessMessage] = useState('Checking subscription…')
@@ -77,7 +119,7 @@ export default function App() {
   const [personLink, setPersonLink] = useState('')
 
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
-  const isOwner = !!account && account.email === OWNER_EMAIL
+  const isOwner = !!account && ADMIN_EMAILS.includes((account.email || '').toLowerCase())
   const locked = !!account && (accessUser !== user.id || !subscribed)
   const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
   const days = daysUntilChristmas()
@@ -125,6 +167,27 @@ export default function App() {
     setAccessMessage('Checking subscription…')
     setAccessRetry((n) => n + 1)
   }
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = window.setTimeout(() => setResendCooldown((n) => n - 1), 1000)
+    return () => window.clearTimeout(t)
+  }, [resendCooldown])
+
+  // When a confirmation link is old or already used, Supabase sends people back with an error in the URL.
+  // Show a clear message + a resend button instead of silently dropping them on the sign-up form.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, '') || window.location.search.replace(/^\?/, ''))
+    const code = params.get('error_code') || params.get('error')
+    if (!code) return
+    const expired = /otp_expired|expired|invalid/i.test(code + ' ' + (params.get('error_description') || ''))
+    setAuthMode('signin')
+    setAwaitingEmail(' ')
+    setAwaitingNote(expired
+      ? 'That confirmation link expired or was already used. This usually happens when you create the account more than once — only the newest email works. Try signing in first; if it says your email isn\'t confirmed, tap “Resend confirmation email.”'
+      : 'Something went wrong with that email link. Try signing in, or resend the confirmation email.')
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -205,26 +268,77 @@ export default function App() {
     }, 60)
   }
 
+  function friendlyAuthError(error) {
+    const msg = error?.message || 'Something went wrong. Please try again.'
+    if (/rate limit|only request this after/i.test(msg)) return 'We just sent you an email. Please wait a minute, check your inbox (and spam), then try again.'
+    if (/email not confirmed/i.test(msg)) return 'Your email isn\'t confirmed yet. Open the confirmation email we sent you, tap the link, then sign in.'
+    if (/invalid login credentials/i.test(msg)) return 'That email and password don\'t match. Double-check them, or tap “Forgot password?”.'
+    if (/already registered/i.test(msg)) return 'This email already has an account. Tap “Sign in” instead.'
+    return msg
+  }
+
   async function handleCreateAccount(e) {
     e.preventDefault()
+    if (authBusy) return
     setAuthError('')
     if (!authName.trim()) return setAuthError('Enter your name.')
+    const email = authEmail.trim().toLowerCase()
+    setAuthBusy(true)
     try {
-      const { error } = await supabase.auth.signUp({ email: authEmail.trim().toLowerCase(), password: authPassword, options: { data: { name: authName.trim() }, emailRedirectTo: window.location.origin } })
+      const { error } = await supabase.auth.signUp({ email, password: authPassword, options: { data: { name: authName.trim() }, emailRedirectTo: window.location.origin } })
       if (error) throw error
-      setResetMessage('Check your email to confirm your account, then sign in.')
       setAuthPassword('')
-    } catch (error) { setAuthError(error.message) }
+      setResetMessage('')
+      setAuthMode('signin')
+      setAwaitingEmail(email)
+      setAwaitingNote('')
+      setResendCooldown(60)
+    } catch (error) {
+      if (/rate limit|only request this after/i.test(error?.message || '')) {
+        setAuthMode('signin')
+        setAwaitingEmail(email)
+        setAwaitingNote('We already sent you a confirmation email. Please use the newest one.')
+        setResendCooldown(60)
+      } else setAuthError(friendlyAuthError(error))
+    } finally { setAuthBusy(false) }
   }
 
   async function handleSignIn(e) {
     e.preventDefault()
+    if (authBusy) return
     setAuthError('')
+    const email = authEmail.trim().toLowerCase()
+    setAuthBusy(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword })
+      const { error } = await supabase.auth.signInWithPassword({ email, password: authPassword })
       if (error) throw error
       setAuthPassword('')
-    } catch (error) { setAuthError(error.message) }
+      setAwaitingEmail('')
+      setAwaitingNote('')
+    } catch (error) {
+      if (/email not confirmed/i.test(error?.message || '')) {
+        setAwaitingEmail(email)
+        setAwaitingNote('Your email isn\'t confirmed yet. Tap the link in the confirmation email, then sign in.')
+      } else setAuthError(friendlyAuthError(error))
+    } finally { setAuthBusy(false) }
+  }
+
+  async function handleResendConfirmation() {
+    const email = (awaitingEmail.trim() || authEmail.trim()).toLowerCase()
+    if (!email) { setAwaitingEmail(''); setAuthError('Enter your email, then tap Sign in.'); return }
+    if (resendCooldown > 0 || authBusy) return
+    setAuthBusy(true)
+    setAuthError('')
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: window.location.origin } })
+      if (error) throw error
+      setAwaitingEmail(email)
+      setAwaitingNote('New email sent! Only the newest link works — open that one.')
+      setResendCooldown(60)
+    } catch (error) {
+      setAuthError(friendlyAuthError(error))
+      setResendCooldown(60)
+    } finally { setAuthBusy(false) }
   }
 
   async function handleSignOut() {
@@ -332,6 +446,7 @@ export default function App() {
   if (!account) {
     return (
       <div className="page welcome-page">
+        <style>{WELCOME_LAYOUT_CSS}</style>
         <main className="welcome-layout">
           <section className="welcome-intro">
             <h1>Giftmas<br />Tracker</h1>
@@ -346,6 +461,27 @@ export default function App() {
           </section>
           <section className="welcome-account">
             <div className="welcome-form-panel">
+              {awaitingEmail ? (
+                <div className="check-email" role="status" aria-live="polite" style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '2.6rem', lineHeight: 1 }} aria-hidden="true">📬</div>
+                  <h2 style={{ margin: '0.4rem 0' }}>Check your email</h2>
+                  {awaitingEmail.trim() ? (
+                    <p>We sent a confirmation link to<br /><strong>{awaitingEmail.trim()}</strong></p>
+                  ) : null}
+                  {awaitingNote && <p className="hint">{awaitingNote}</p>}
+                  <ol style={{ textAlign: 'left', margin: '0.6rem auto', paddingLeft: '1.2rem', maxWidth: '22rem' }}>
+                    <li>Open the email from Giftmas Tracker (it may be in <strong>Spam</strong> or <strong>Promotions</strong>).</li>
+                    <li>Tap <strong>Confirm your email</strong>.</li>
+                    <li>Come back here and sign in.</li>
+                  </ol>
+                  <p className="hint">Please don’t create the account again — that cancels the first link.</p>
+                  {authError && <p className="error" role="alert">{authError}</p>}
+                  <button className="welcome-submit" type="button" onClick={() => { setAuthEmail(awaitingEmail.trim() || authEmail); setAwaitingEmail(''); setAwaitingNote(''); setAuthMode('signin'); setAuthError('') }}>I confirmed — sign me in</button>
+                  <button type="button" className="forgot-link" disabled={resendCooldown > 0 || authBusy} onClick={handleResendConfirmation}>
+                    {resendCooldown > 0 ? `Resend confirmation email (${resendCooldown}s)` : 'Resend confirmation email'}
+                  </button>
+                </div>
+              ) : (<>
               <div className="auth-tabs">
                 <button type="button" className={authMode === 'create' ? 'tab active' : 'tab'} onClick={() => { setAuthMode('create'); setShowReset(false); setAuthError('') }}>Create account</button>
                 <button type="button" className={authMode === 'signin' ? 'tab active' : 'tab'} onClick={() => { setAuthMode('signin'); setShowReset(false); setAuthError('') }}>Sign in</button>
@@ -364,12 +500,13 @@ export default function App() {
                   <label>Password<input type="password" autoComplete={authMode === 'create' ? 'new-password' : 'current-password'} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" /></label>
                   {authError && <p className="error" role="alert">{authError}</p>}
                   {resetMessage && <p className="hint" role="status">{resetMessage}</p>}
-                  <button className="welcome-submit" type="submit">{authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
+                  <button className="welcome-submit" type="submit" disabled={authBusy}>{authBusy ? 'One moment…' : authMode === 'create' ? 'Create my account' : 'Sign in'}</button>
                   {authMode === 'signin' && (
                     <button type="button" className="forgot-link" onClick={() => { setShowReset(true); setAuthError(''); setResetMessage('') }}>Forgot password?</button>
                   )}
                 </form>
               )}
+              </>)}
               <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
             </div>
             <footer className="welcome-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
