@@ -48,3 +48,20 @@ Implemented on this branch (not deployed):
 
 Still required before launch: deploy the sandbox functions and migration, set
 `GIFTMAS_STRIPE_TEST_SECRET_KEY`, and run the real sandbox purchase end to end.
+
+## Update (2026-11-11)
+
+- Return address fixed. The live site is giftmastracker.com, but checkout only
+  knew giftmastracker.vercel.app. From the real domain, the browser would have
+  refused the checkout reply, and a buyer would have come back to a different
+  address where they are not signed in. Both functions now accept
+  giftmastracker.com, www.giftmastracker.com and giftmastracker.vercel.app, and
+  send the buyer back to the one they started on.
+- Previews are sandbox automatically. Any address other than the three live
+  ones (a Vercel preview, localhost) uses the Stripe sandbox copies, with a
+  small "Test mode" note on screen. VITE_GIFTMAS_STRIPE_MODE still overrides.
+- After paying, the buyer sees "Your payment went through. Unlocking your
+  yearly plan now…" while the app checks every 2.5 seconds.
+- giftmas-test-create-checkout redeployed with this code (sandbox only).
+- Still to do before live: deploy giftmas-create-checkout and the new
+  giftmas-stripe-webhook, confirm GIFTMAS_STRIPE_SECRET_KEY is set, merge.

@@ -815,3 +815,16 @@ dialog {
 .forgot-link:hover { color:#efe0c4; }
 .feedback-line { font-size: 0.82em; opacity: 0.92; }
 .feedback-line a { color: inherit; text-decoration: underline; }
+
+/* Shown only on preview builds that use the Stripe sandbox. */
+.sandbox-note {
+  margin: 8px auto 0;
+  max-width: 560px;
+  padding: 6px 12px;
+  border: 1px dashed rgba(212, 175, 55, 0.7);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: #f3e3a3;
+  background: rgba(0, 0, 0, 0.18);
+}

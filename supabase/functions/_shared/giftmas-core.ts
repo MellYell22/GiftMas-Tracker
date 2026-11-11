@@ -19,10 +19,17 @@ export interface GiftmasConfig {
   priceId: string | null
   secretKeyEnv: string
   secretKeyPrefixes: string[]
+  // Where buyers land after checkout when the request names no allowed origin.
   siteUrl: string
+  // Every address the real app is served from. The return address must be one
+  // of these so the buyer comes back to the same site they are signed in on.
+  siteOrigins: string[]
   subscriptionsTable: string
   signingSecretRpc: string
 }
+
+// The live app's addresses. www redirects to the bare domain on Vercel.
+const SITE_ORIGINS = ['https://giftmastracker.com', 'https://www.giftmastracker.com', 'https://giftmastracker.vercel.app']
 
 export const CONFIG: Record<Mode, GiftmasConfig> = {
   live: {
@@ -32,7 +39,8 @@ export const CONFIG: Record<Mode, GiftmasConfig> = {
     priceId: 'price_1UY9iFLxgEPijLi36KTDGZBa',
     secretKeyEnv: 'GIFTMAS_STRIPE_SECRET_KEY',
     secretKeyPrefixes: ['sk_live_', 'rk_live_'],
-    siteUrl: 'https://giftmastracker.vercel.app',
+    siteUrl: 'https://giftmastracker.com',
+    siteOrigins: SITE_ORIGINS,
     subscriptionsTable: 'giftmas_subscriptions',
     signingSecretRpc: 'giftmas_webhook_signing_secret',
   },
@@ -43,7 +51,8 @@ export const CONFIG: Record<Mode, GiftmasConfig> = {
     priceId: null,
     secretKeyEnv: 'GIFTMAS_STRIPE_TEST_SECRET_KEY',
     secretKeyPrefixes: ['sk_test_', 'rk_test_'],
-    siteUrl: 'https://giftmastracker.vercel.app',
+    siteUrl: 'https://giftmastracker.com',
+    siteOrigins: SITE_ORIGINS,
     subscriptionsTable: 'giftmas_test_subscriptions',
     signingSecretRpc: 'giftmas_test_webhook_signing_secret',
   },
@@ -305,7 +314,7 @@ export interface JsonReply { status: number; json: Record<string, unknown> }
 
 export function allowedOrigin(origin: string | null, config: GiftmasConfig, extra: string[] = []): string | null {
   if (!origin) return null
-  if (origin === config.siteUrl || extra.includes(origin)) return origin
+  if (origin === config.siteUrl || config.siteOrigins.includes(origin) || extra.includes(origin)) return origin
   // The sandbox may also be driven from a local dev server or a Vercel preview.
   if (config.mode === 'test') {
     if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin

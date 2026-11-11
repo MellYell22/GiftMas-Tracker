@@ -2,10 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from './supabase'
 
-// Stripe mode. Live unless a preview build sets VITE_GIFTMAS_STRIPE_MODE=test, which
-// points checkout, the access check and the saved list at the sandbox copies so a
-// test payment can never unlock or alter a real account.
-const SANDBOX = import.meta.env.VITE_GIFTMAS_STRIPE_MODE === 'test'
+// Stripe mode. The real site (giftmastracker.com) is always live. Every other
+// address, such as a Vercel preview or a local dev server, uses the Stripe
+// sandbox: checkout, the access check and the saved list all point at the
+// sandbox copies, so a test payment can never charge a real card or unlock or
+// alter a real account. VITE_GIFTMAS_STRIPE_MODE=live or =test overrides this.
+const LIVE_HOSTS = ['giftmastracker.com', 'www.giftmastracker.com', 'giftmastracker.vercel.app']
+const STRIPE_MODE = import.meta.env.VITE_GIFTMAS_STRIPE_MODE
+  || (LIVE_HOSTS.includes(window.location.hostname) ? 'live' : 'test')
+const SANDBOX = STRIPE_MODE === 'test'
 const CHECKOUT_FUNCTION = SANDBOX ? 'giftmas-test-create-checkout' : 'giftmas-create-checkout'
 const ACCESS_RPC = SANDBOX ? 'giftmas_test_has_access' : 'giftmas_has_access'
 const LIST_TABLE = SANDBOX ? 'giftmas_test_lists' : 'gift_lists'
@@ -115,7 +120,10 @@ export default function App() {
         if (cancelled) return
         setAccessUser(uid)
         setSubscribed(!error && data === true)
-        setAccessMessage(error ? 'Could not verify your subscription. Please retry.' : data === true ? 'Subscription verified.' : 'No active subscription confirmed yet. After paying, access updates automatically. Use your account email at checkout.')
+        setAccessMessage(error ? 'Could not verify your subscription. Please retry.'
+          : data === true ? 'Subscription verified.'
+          : justPaidRef.current ? 'Thank you! Your payment went through. Unlocking your yearly plan now…'
+          : 'No active subscription confirmed yet. After paying, access updates automatically.')
       } catch {
         if (!cancelled) {
           setAccessUser(uid)
@@ -534,6 +542,7 @@ export default function App() {
           <span>Signed in as {account.name}<em className="topbar-email"> · {account.email}</em> · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
+        {SANDBOX && <p className="sandbox-note">Test mode: payments here use Stripe's sandbox. No real card is charged.</p>}
         <h1>Giftmas Tracker</h1>
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
@@ -543,7 +552,7 @@ export default function App() {
         {locked && (
           <section className="card">
             <h2>Subscribe to open your tracker</h2>
-            <p className="hint">Giftmas Tracker is $19.99 a year. Subscribe using your account email. Your tracker opens after payment is verified.</p>
+            <p className="hint">Giftmas Tracker is $19.99 a year. Your tracker opens on this account as soon as payment is verified.</p>
             <p role="status">{accessMessage}</p>
             <button type="button" className="primary-btn" onClick={handleUnlock}>Check payment status</button>
           </section>

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { test } from 'node:test'
-import { CONFIG, formEncode, handleCreateCheckout, handleWebhook, hasEntitlement } from '../supabase/functions/_shared/giftmas-core.ts'
+import { allowedOrigin, CONFIG, formEncode, handleCreateCheckout, handleWebhook, hasEntitlement } from '../supabase/functions/_shared/giftmas-core.ts'
 import type { AccountUser, PaymentIssue, Store, SubRow } from '../supabase/functions/_shared/giftmas-core.ts'
 
 const SECRET = 'whsec_unit_test_only'
@@ -255,6 +255,21 @@ test('an unknown origin cannot steer the return address', async () => {
   const c = checkout()
   await c.run('Bearer alice-token', 'https://evil.example')
   assert.equal(c.calls.at(-1).params.success_url, `${config.siteUrl}/?checkout=success`)
+})
+
+test('buyers return to the site they started on, including giftmastracker.com', async () => {
+  for (const origin of ['https://giftmastracker.com', 'https://www.giftmastracker.com', 'https://giftmastracker.vercel.app']) {
+    const c = checkout()
+    await c.run('Bearer alice-token', origin)
+    assert.equal(c.calls.at(-1).params.success_url, `${origin}/?checkout=success`)
+    assert.equal(c.calls.at(-1).params.cancel_url, `${origin}/?checkout=cancelled`)
+  }
+  assert.equal(allowedOrigin('https://giftmastracker.com', CONFIG.live), 'https://giftmastracker.com')
+  assert.equal(CONFIG.live.siteUrl, 'https://giftmastracker.com')
+  // Previews and localhost may use the sandbox only, never live.
+  assert.equal(allowedOrigin('https://giftmastracker-abc123-team.vercel.app', CONFIG.live), null)
+  assert.equal(allowedOrigin('http://localhost:5173', CONFIG.live), null)
+  assert.equal(allowedOrigin('https://giftmastracker-abc123-team.vercel.app', CONFIG.test), 'https://giftmastracker-abc123-team.vercel.app')
 })
 
 test('form encoding matches what Stripe expects', () => {
