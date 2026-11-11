@@ -19,6 +19,7 @@ export interface GiftmasConfig {
   priceId: string | null
   secretKeyEnv: string
   secretKeyPrefixes: string[]
+  webhookSecretEnv: string
   // Where buyers land after checkout when the request names no allowed origin.
   siteUrl: string
   // Every address the real app is served from. The return address must be one
@@ -39,6 +40,7 @@ export const CONFIG: Record<Mode, GiftmasConfig> = {
     priceId: 'price_1UY9iFLxgEPijLi36KTDGZBa',
     secretKeyEnv: 'GIFTMAS_STRIPE_SECRET_KEY',
     secretKeyPrefixes: ['sk_live_', 'rk_live_'],
+    webhookSecretEnv: 'GIFTMAS_STRIPE_WEBHOOK_KEY',
     siteUrl: 'https://giftmastracker.com',
     siteOrigins: SITE_ORIGINS,
     subscriptionsTable: 'giftmas_subscriptions',
@@ -51,6 +53,7 @@ export const CONFIG: Record<Mode, GiftmasConfig> = {
     priceId: null,
     secretKeyEnv: 'GIFTMAS_STRIPE_TEST_SECRET_KEY',
     secretKeyPrefixes: ['sk_test_', 'rk_test_'],
+    webhookSecretEnv: 'GIFTMAS_STRIPE_TEST_WEBHOOK_KEY',
     siteUrl: 'https://giftmastracker.com',
     siteOrigins: SITE_ORIGINS,
     subscriptionsTable: 'giftmas_test_subscriptions',
@@ -158,6 +161,9 @@ export interface WebhookDeps {
   config: GiftmasConfig
   // Present only when a Stripe key is configured. Used to read the renewal date.
   stripe?: StripeCall | null
+  // Signing secrets saved as Edge Function secrets, tried alongside the one in
+  // the database vault. Any one matching is enough; all of them are the owner's.
+  extraSecrets?: string[]
   now?: () => number
   log?: (...args: unknown[]) => void
 }
@@ -169,9 +175,12 @@ export async function handleWebhook(input: { method: string; body: string; signa
   const reply = (body: string, status = 200): Reply => ({ status, body })
 
   if (input.method !== 'POST') return reply('Method not allowed', 405)
-  const secret = await store.signingSecret().catch(() => null)
-  if (!secret) { log('Giftmas webhook signing secret unavailable'); return reply('Webhook not configured', 503) }
-  if (!await verifyStripeSignature(input.body, input.signature, secret, now())) return reply('Invalid Stripe signature', 400)
+  const vaultSecret = await store.signingSecret().catch(() => null)
+  const secrets = [vaultSecret, ...(deps.extraSecrets ?? [])].filter((x): x is string => typeof x === 'string' && x.startsWith('whsec_'))
+  if (!secrets.length) { log('Giftmas webhook signing secret unavailable'); return reply('Webhook not configured', 503) }
+  let signed = false
+  for (const secret of secrets) if (await verifyStripeSignature(input.body, input.signature, secret, now())) { signed = true; break }
+  if (!signed) return reply('Invalid Stripe signature', 400)
 
   let event: any
   try { event = JSON.parse(input.body) } catch { return reply('Invalid event', 400) }

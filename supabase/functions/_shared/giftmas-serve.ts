@@ -19,7 +19,10 @@ export function serveWebhook(mode: Mode) {
       const usable = config.secretKeyPrefixes.some((prefix) => key.startsWith(prefix))
       const result = await handleWebhook(
         { method: req.method, body: await req.text(), signature: req.headers.get('stripe-signature') ?? '' },
-        { store: supabaseStore(serviceClient(), config), config, stripe: usable ? stripeClient(key) : null })
+        {
+          store: supabaseStore(serviceClient(), config), config, stripe: usable ? stripeClient(key) : null,
+          extraSecrets: [Deno.env.get(config.webhookSecretEnv) ?? ''],
+        })
       return new Response(result.body, { status: result.status, headers: { 'content-type': 'text/plain' } })
     },
   }

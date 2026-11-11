@@ -272,6 +272,21 @@ test('buyers return to the site they started on, including giftmastracker.com', 
   assert.equal(allowedOrigin('https://giftmastracker-abc123-team.vercel.app', CONFIG.test), 'https://giftmastracker-abc123-team.vercel.app')
 })
 
+test('a webhook secret saved as a function secret is accepted too', async () => {
+  const m = memoryStore(users())
+  m.store.signingSecret = async () => 'whsec_old_vault_value'
+  const body = JSON.stringify(evt('checkout.session.completed', session(ALICE)))
+  const t = Math.floor(NOW / 1000)
+  const sig = (secret: string) => `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')}`
+  const deps = { store: m.store, config, now: () => NOW, log: () => {} }
+  assert.equal((await handleWebhook({ method: 'POST', body, signature: sig(SECRET) }, deps)).status, 400)
+  const ok = await handleWebhook({ method: 'POST', body, signature: sig(SECRET) }, { ...deps, extraSecrets: [SECRET] })
+  assert.equal(ok.status, 200)
+  assert.equal(hasEntitlement(await m.store.subByUser(ALICE), NOW), true)
+  // A publishable key or blank value is never treated as a signing secret.
+  assert.equal((await handleWebhook({ method: 'POST', body, signature: sig('pk_live_x') }, { ...deps, extraSecrets: ['pk_live_x', ''] })).status, 400)
+})
+
 test('form encoding matches what Stripe expects', () => {
   assert.deepEqual(formEncode({ mode: 'subscription', line_items: [{ price: 'p', quantity: 1 }], metadata: { app: 'giftmas' } }),
     ['mode=subscription', 'line_items%5B0%5D%5Bprice%5D=p', 'line_items%5B0%5D%5Bquantity%5D=1', 'metadata%5Bapp%5D=giftmas'])
