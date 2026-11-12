@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 
 import { supabase } from './supabase'
 
@@ -748,6 +749,7 @@ export default function App() {
         </>)}
         <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
+      <Analytics />
     </div>
   )
 }
