@@ -15,6 +15,13 @@ const CHECKOUT_FUNCTION = SANDBOX ? 'giftmas-test-create-checkout' : 'giftmas-cr
 const ACCESS_RPC = SANDBOX ? 'giftmas_test_has_access' : 'giftmas_has_access'
 const LIST_TABLE = SANDBOX ? 'giftmas_test_lists' : 'gift_lists'
 const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
+// The free plan: this many people without paying. The database enforces the
+// same number (the gift_lists and giftmas_test_lists policies), so a change
+// here must be made there too. Owner accounts and subscribers are unlimited.
+const FREE_PEOPLE_LIMIT = 2
+const MSG_CHECKING = 'Checking subscription…'
+const MSG_OPENING = 'Opening secure checkout…'
+const MSG_VERIFY_FAILED = 'Could not verify your subscription. Please retry.'
 const dataKey = (email) => `christmas-app-data-${email}`
 
 function loadJSON(key, fallback) {
@@ -81,8 +88,13 @@ export default function App() {
   const [resendCooldown, setResendCooldown] = useState(0)
   const [subscribed, setSubscribed] = useState(false)
   const [accessUser, setAccessUser] = useState('')
-  const [accessMessage, setAccessMessage] = useState('Checking subscription…')
+  const [accessMessage, setAccessMessage] = useState('')
   const [accessRetry, setAccessRetry] = useState(0)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [planNote, setPlanNote] = useState('')
+  const manualCheck = useRef(false)
+  const planAnswered = useRef(false)
+  const paywallRef = useRef(null)
   const [openPerson, setOpenPerson] = useState(null)
   const [addingPerson, setAddingPerson] = useState(false)
   const [personDetails, setPersonDetails] = useState(false)
@@ -93,11 +105,18 @@ export default function App() {
 
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && ADMIN_EMAILS.includes((account.email || '').toLowerCase())
-  const locked = !!account && (accessUser !== user.id || !subscribed)
   const [checkoutBusy, setCheckoutBusy] = useState(false)
   // Just back from Stripe: check access every couple of seconds until it opens.
   const [justPaid, setJustPaid] = useState(() => new URLSearchParams(window.location.search).get('checkout') === 'success')
   const justPaidRef = useRef(justPaid)
+  // Everyone signed in can use the tracker. Without a subscription it holds up
+  // to FREE_PEOPLE_LIMIT people; the paywall appears when they ask for more.
+  const planKnown = !!account && accessUser === user.id
+  const freePlan = planKnown && !subscribed
+  const atFreeLimit = freePlan && people.length >= FREE_PEOPLE_LIMIT
+  // A lapsed subscriber can still see a longer list, but it will not save.
+  const overFreeLimit = freePlan && people.length > FREE_PEOPLE_LIMIT
+  const showPaywall = freePlan && (paywallOpen || justPaid || overFreeLimit)
   const days = daysUntilChristmas()
   const saveTone = /not saved|could not/i.test(cloudMessage)
     ? ' is-error'
@@ -105,31 +124,47 @@ export default function App() {
       ? ' is-busy'
       : ''
 
+  // A different account, or signing out, starts again from "plan not known yet".
   useEffect(() => {
-    let cancelled = false
-    let inFlight = false
+    planAnswered.current = false
+    manualCheck.current = false
     setSubscribed(false)
     setAccessUser('')
+    setAccessMessage('')
+    setPaywallOpen(false)
+    setPlanNote('')
+  }, [user?.id])
+
+  useEffect(() => {
     if (!user?.id) return
+    let cancelled = false
+    let inFlight = false
     const uid = user.id
+    // A check that fails (no signal, say) is not a "no": once the plan has been
+    // confirmed in this visit, a failed re-check leaves it as it was.
+    const failed = () => {
+      setAccessUser(uid)
+      if (!planAnswered.current) setSubscribed(false)
+      setAccessMessage(MSG_VERIFY_FAILED)
+    }
     async function checkAccess() {
       if (inFlight) return
       inFlight = true
       try {
         const { data, error } = await supabase.rpc(ACCESS_RPC, { p_user_id: uid })
         if (cancelled) return
+        if (error) { failed(); return }
+        planAnswered.current = true
         setAccessUser(uid)
-        setSubscribed(!error && data === true)
-        setAccessMessage(error ? 'Could not verify your subscription. Please retry.'
-          : data === true ? 'Subscription verified.'
-          : justPaidRef.current ? 'Thank you! Your payment went through. Unlocking your yearly plan now…'
-          : 'No active subscription confirmed yet. After paying, access updates automatically.')
+        setSubscribed(data === true)
+        if (data === true) { setAccessMessage(''); manualCheck.current = false }
+        else if (justPaidRef.current) setAccessMessage('Thank you! Your payment went through. Unlocking your yearly plan now…')
+        else if (manualCheck.current) {
+          manualCheck.current = false
+          setAccessMessage('No payment found on this account yet. If you just paid, give it a few seconds and check again.')
+        } else setAccessMessage((m) => (m === MSG_CHECKING || m === MSG_OPENING || m === MSG_VERIFY_FAILED ? '' : m))
       } catch {
-        if (!cancelled) {
-          setAccessUser(uid)
-          setSubscribed(false)
-          setAccessMessage('Could not verify your subscription. Please retry.')
-        }
+        if (!cancelled) failed()
       } finally { inFlight = false }
     }
     checkAccess()
@@ -155,10 +190,28 @@ export default function App() {
   useEffect(() => {
     justPaidRef.current = justPaid
     if (!justPaid) return
-    if (subscribed) { setJustPaid(false); return }
-    const t = window.setTimeout(() => setJustPaid(false), 120000)
+    if (subscribed) {
+      setJustPaid(false)
+      setPlanNote('Thank you! Your yearly plan is active. Add as many people as you like.')
+      return
+    }
+    // Two minutes with no word from Stripe: stop the fast checks, but keep the
+    // payment box open so a paid customer is never left with nothing to tap.
+    const t = window.setTimeout(() => {
+      setJustPaid(false)
+      setPaywallOpen(true)
+      setAccessMessage('We have not seen your payment yet. Tap “Check payment status” in a minute. If your plan still does not unlock, contact us and we will put it right.')
+    }, 120000)
     return () => window.clearTimeout(t)
   }, [justPaid, subscribed])
+
+  // The plan is active (paid here, or in another tab): put the paywall away.
+  useEffect(() => { if (subscribed) setPaywallOpen(false) }, [subscribed])
+
+  // Bring the paywall into view when it opens; it sits below the list.
+  useEffect(() => {
+    if (showPaywall) paywallRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [showPaywall])
 
   // The checkout page is created on the server for the signed-in account, so the
   // payment is tied to this account before Stripe ever sees it.
@@ -166,7 +219,7 @@ export default function App() {
     e.preventDefault()
     if (checkoutBusy) return
     setCheckoutBusy(true)
-    setAccessMessage('Opening secure checkout…')
+    setAccessMessage(MSG_OPENING)
     try {
       const { data, error } = await supabase.functions.invoke(CHECKOUT_FUNCTION, { body: {} })
       if (error) {
@@ -183,8 +236,20 @@ export default function App() {
   }
 
   function handleUnlock() {
-    setAccessMessage('Checking subscription…')
+    manualCheck.current = true
+    setAccessMessage(MSG_CHECKING)
     setAccessRetry((n) => n + 1)
+  }
+
+  function openPaywall() {
+    setAddingPerson(false)
+    setPersonDetails(false)
+    setPaywallOpen(true)
+  }
+
+  function startAddingPerson() {
+    if (atFreeLimit) openPaywall()
+    else setAddingPerson(true)
   }
 
   useEffect(() => {
@@ -221,7 +286,7 @@ export default function App() {
     let cancelled = false
     setLoadedUser('')
     setPeople([])
-    if (!user?.id || locked) return
+    if (!user?.id) return
     setCloudMessage('Loading your saved list…')
     async function load() {
       await saveQueue.current
@@ -236,10 +301,10 @@ export default function App() {
     }
     load().catch(() => { if (!cancelled) setCloudMessage('Could not load your list — please retry.') })
     return () => { cancelled = true }
-  }, [user?.id, retry, locked])
+  }, [user?.id, retry])
 
   useEffect(() => {
-    if (!user?.id || locked || loadedUser !== user.id) return
+    if (!user?.id || loadedUser !== user.id) return
     const serialized = JSON.stringify(people)
     if (serialized === lastSaved.current) return
     let cancelled = false
@@ -247,17 +312,28 @@ export default function App() {
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
       const { error } = await supabase.from(LIST_TABLE).upsert({ user_id: user.id, people })
       if (cancelled) return
-      if (error) { setCloudMessage('Not saved yet — keep this page open and retry.'); return }
+      if (error) {
+        // 42501 is the database refusing a list longer than the free plan allows.
+        const overPlan = error.code === '42501'
+        setCloudMessage(overPlan
+          ? `Not saved — the free plan saves up to ${FREE_PEOPLE_LIMIT} people. Subscribe to save everyone.`
+          : 'Not saved yet — keep this page open and retry.')
+        if (overPlan) setPaywallOpen(true)
+        return
+      }
       lastSaved.current = serialized
       setCloudMessage('Saved to your account')
     }).catch(() => { if (!cancelled) setCloudMessage('Not saved yet — keep this page open and retry.') })
     return () => { cancelled = true }
-  }, [people, loadedUser, user?.id, locked])
+  }, [people, loadedUser, user?.id])
 
   function importDeviceList() {
     const legacy = loadJSON(dataKey(sessionEmail), [])
     if (!Array.isArray(legacy) || !legacy.length) { setCloudMessage('No older list found on this device.'); return }
-    setPeople((current) => [...current, ...legacy.filter((p) => !current.some((item) => item.id === p.id))])
+    const fresh = legacy.filter((p) => !people.some((item) => item.id === p.id))
+    if (!fresh.length) { setCloudMessage('That older list is already here.'); return }
+    if (freePlan && people.length + fresh.length > FREE_PEOPLE_LIMIT) { openPaywall(); return }
+    setPeople((current) => [...current, ...fresh.filter((p) => !current.some((item) => item.id === p.id))])
   }
 
   const totals = useMemo(() => {
@@ -388,6 +464,7 @@ export default function App() {
   function handleAddPerson(e) {
     e.preventDefault()
     if (!personName.trim()) return
+    if (atFreeLimit) { openPaywall(); return }
     const id = crypto.randomUUID()
     setPeople((prev) => [
       ...prev,
@@ -524,7 +601,7 @@ export default function App() {
                 </form>
               )}
               </>)}
-              <p className="welcome-fine-print">Create your account, then subscribe to open your tracker.</p>
+              <p className="welcome-fine-print">Start free with {FREE_PEOPLE_LIMIT} people. Unlimited people is $19.99 a year.</p>
             </div>
           </section>
           <img className="welcome-tree" src="/christmas-tree.png" alt="" aria-hidden="true" />
@@ -539,7 +616,7 @@ export default function App() {
       <BackgroundMotif />
       <main className="wrap">
         <header className="topbar">
-          <span>Signed in as {account.name}<em className="topbar-email"> · {account.email}</em> · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : 'Not subscribed yet'}</span>
+          <span>Signed in as {account.name}<em className="topbar-email"> · {account.email}</em> · {isOwner ? 'Owner account' : subscribed ? 'Yearly plan' : planKnown ? 'Free plan' : 'Checking plan…'}</span>
           <button type="button" className="small-btn" onClick={handleSignOut}>Sign out</button>
         </header>
         {SANDBOX && <p className="sandbox-note">Test mode: payments here use Stripe's sandbox. No real card is charged.</p>}
@@ -547,17 +624,9 @@ export default function App() {
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
         <p className="countdown-ribbon"><b>{days}</b> days until Christmas</p>
-        {locked && <a className="subscribe-btn" href="#subscribe" role="button" aria-busy={checkoutBusy} onClick={handleSubscribe}>Subscribe — $19.99/year</a>}
-
-        {locked && (
-          <section className="card">
-            <h2>Subscribe to open your tracker</h2>
-            <p className="hint">Giftmas Tracker is $19.99 a year. Your tracker opens on this account as soon as payment is verified.</p>
-            <p role="status">{accessMessage}</p>
-            <button type="button" className="primary-btn" onClick={handleUnlock}>Check payment status</button>
-          </section>
-        )}
-        {!locked && (
+        {planNote && <p className="plan-note" role="status">{planNote}</p>}
+        {!planKnown && <p className="hint center" role="status">Checking your plan…</p>}
+        {planKnown && (
           <div className={`status-line${saveTone}`}>
             <span className="dot" aria-hidden="true" />
             <span role="status">{cloudMessage}</span>
@@ -568,7 +637,7 @@ export default function App() {
             ) : null}
           </div>
         )}
-        {!locked && loadedUser === user.id && (<>
+        {planKnown && loadedUser === user.id && (<>
         <section className="summary card">
           <div><strong>${totals.budget}</strong><span>Total budget</span></div>
           <div><strong>${totals.spent}</strong><span>Spent (bought)</span></div>
@@ -606,14 +675,31 @@ export default function App() {
               />
             ))}
             {!addingPerson && (
-              <button type="button" className="new-row" onClick={() => setAddingPerson(true)}>
+              <button type="button" className="new-row" onClick={startAddingPerson}>
                 <span className="plus" aria-hidden="true">+</span> New Person
               </button>
             )}
           </section>
         )}
 
-        {addingPerson || people.length === 0 ? (
+        {showPaywall ? (
+          <section className="card paywall" ref={paywallRef}>
+            <h2>{justPaid ? 'Unlocking your yearly plan' : overFreeLimit ? 'Subscribe to keep everyone on your list' : 'Subscribe to add more people'}</h2>
+            {!justPaid && (
+              <p className="hint">
+                {overFreeLimit
+                  ? `Your list has ${people.length} people and the free plan saves ${FREE_PEOPLE_LIMIT}. Changes will not save until you subscribe, or until the list is back to ${FREE_PEOPLE_LIMIT} people.`
+                  : `The free plan covers ${FREE_PEOPLE_LIMIT} people. Subscribe for $19.99 a year and add as many people as you like. Your plan unlocks on this account as soon as payment is verified.`}
+              </p>
+            )}
+            {accessMessage && <p role="status">{accessMessage}</p>}
+            {!justPaid && <a className="subscribe-btn" href="#subscribe" role="button" aria-busy={checkoutBusy} onClick={handleSubscribe}>Subscribe — $19.99/year</a>}
+            <div className="form-actions">
+              <button type="button" className="small-btn" onClick={handleUnlock}>Check payment status</button>
+              {!justPaid && !overFreeLimit && <button type="button" className="small-btn" onClick={() => setPaywallOpen(false)}>Not now</button>}
+            </div>
+          </section>
+        ) : addingPerson || people.length === 0 ? (
           <section className="card">
             <h2>{people.length === 0 ? 'Who are you shopping for?' : 'Add a person'}</h2>
             <p className="hint">Just a name and a budget. Gifts can come later.</p>
@@ -646,6 +732,13 @@ export default function App() {
             </form>
           </section>
         ) : null}
+
+        {freePlan && !showPaywall && (
+          <p className="plan-line">
+            Free plan: {people.length} of {FREE_PEOPLE_LIMIT} people.{' '}
+            <button type="button" className="ghost-link" onClick={openPaywall}>Unlimited people for $19.99 a year</button>
+          </p>
+        )}
 
         {people.length > 0 && loadedUser === user.id && (
           <p className="tucked-away">
