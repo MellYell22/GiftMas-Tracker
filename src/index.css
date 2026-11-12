@@ -20,16 +20,16 @@
   --gold-line-soft: rgba(203, 168, 85, 0.28);
 
   /* Silver — quiet secondary tone */
-  --silver: #dbe1e8;
-  --silver-dim: rgba(219, 225, 232, 0.72);
-  --silver-line: rgba(219, 225, 232, 0.26);
+  --silver: #e3cc94;
+  --silver-dim: rgba(227, 204, 148, 0.78);
+  --silver-line: rgba(217, 179, 106, 0.24);
 
   /* Christmas green — accents, and the names */
-  --name-green: #63d896;
+  --name-green: #e2c47c; /* names are gold now (kept the old variable name) */
   --pine: #14532d;
   --pine-soft: #1f7a44;
 
-  --ink: #f6e9d7;
+  --ink: #ecd8a8;
   --line: var(--gold-line);
   --paper: var(--candy);
 
@@ -42,13 +42,16 @@
 
 * { box-sizing: border-box; }
 
-html { background: #550400; }
+html { background: #550400; font-size: 17px; }
+button, input, textarea, select { font-family: inherit; }
 
 body {
   margin: 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  font-size: 17px;
-  line-height: 1.55;
+  font-family: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: 18.5px;
+  font-weight: 400;
+  font-variant-numeric: lining-nums;
+  line-height: 1.5;
   color: var(--ink);
   background: radial-gradient(ellipse at 48% 20%, #a71413 0%, #850807 48%, #550400 100%);
   background-attachment: fixed;
@@ -87,7 +90,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--pine-soft); }
 /* ---------- Type ---------- */
 h1 {
   margin: 20px 0 0;
-  font: normal clamp(40px, 5.2vw, 60px)/1.04 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font: normal clamp(40px, 5.2vw, 60px)/1.04 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   letter-spacing: -0.015em;
   text-shadow: none;
   background: linear-gradient(104deg, #c9a253 0%, #e4cb8c 26%, #f2e3bd 42%, #d4ad5c 58%, #a8812a 100%);
@@ -101,7 +104,7 @@ h1 {
 }
 h2 {
   margin: 0 0 10px;
-  font: normal 1.35rem/1.25 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font: normal 1.35rem/1.25 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   color: var(--gold-pale);
   letter-spacing: 0.01em;
 }
@@ -114,7 +117,7 @@ h2 {
 
 /* The AI helper is the selling point — let it shine. */
 .helper-highlight {
-  font-weight: 700;
+  font-weight: 500;
   background: linear-gradient(100deg, #cfa652 0%, #e2c47c 30%, #f3e6c8 46%, #d4ad5c 60%, #a8812a 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -125,10 +128,10 @@ h2 {
 @supports not (background-clip: text) {
   .helper-highlight { color: #e2c47c; -webkit-text-fill-color: currentColor; }
 }
-.welcome-subtitle .helper-highlight { font-weight: 650; }
+.welcome-subtitle .helper-highlight { font-weight: 500; }
 .countdown {
   margin: 6px 0 20px;
-  font: normal 1.15rem/1.3 Georgia, "Times New Roman", serif;
+  font: normal 1.15rem/1.3 "Cormorant Garamond", Georgia, serif;
   color: var(--silver);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -137,7 +140,7 @@ h2 {
 .hint { color: var(--silver-dim); font-size: 0.93rem; }
 .hint.center { text-align: center; }
 .fine-print { font-size: 0.84rem; color: var(--silver-dim); line-height: 1.5; }
-.error { color: #efb46a; font-weight: 600; }
+.error { color: #efb46a; font-weight: 500; }
 .optional-label {
   opacity: 0.6; font-weight: 400; font-size: 0.76rem;
   margin-left: 6px; text-transform: lowercase; color: var(--silver);
@@ -205,7 +208,7 @@ input {
   border-radius: 12px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-input::placeholder { color: rgba(219, 225, 232, 0.45); }
+input::placeholder { color: rgba(227, 204, 148, 0.5); }
 input:focus {
   outline: none;
   border-color: var(--gold-soft);
@@ -222,7 +225,7 @@ button { font: inherit; cursor: pointer; border-radius: 12px; border: 1px solid 
   background: linear-gradient(#e2c47c, #a8812a);
   border: 1px solid #d9bc72;
   color: var(--wine);
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: 0.01em;
   border-radius: 14px;
   padding: 12px 18px;
@@ -236,7 +239,7 @@ button { font: inherit; cursor: pointer; border-radius: 12px; border: 1px solid 
   background: linear-gradient(#e2c47c, #a8812a);
   border: 1px solid #d9bc72;
   color: var(--wine);
-  font-weight: 650;
+  font-weight: 500;
   font-size: 1.02rem;
   padding: 11px 28px;
   border-radius: 999px;
@@ -255,7 +258,7 @@ button { font: inherit; cursor: pointer; border-radius: 12px; border: 1px solid 
   font-size: 0.84rem;
   border-radius: 999px;
 }
-.small-btn:hover { background: rgba(219, 225, 232, 0.14); color: #fff; }
+.small-btn:hover { background: rgba(219, 225, 232, 0.14); color: #f0dcaa; }
 .small-btn.danger { color: #f6b8a6; border-color: rgba(246, 184, 166, 0.3); }
 .small-btn.danger:hover { background: rgba(246, 184, 166, 0.14); color: #ffd9cf; }
 button:disabled { opacity: 0.55; cursor: default; filter: none; }
@@ -296,7 +299,7 @@ button:disabled { opacity: 0.55; cursor: default; filter: none; }
   width: 1px; background: var(--silver-line);
 }
 .summary strong {
-  font: normal 1.85rem/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font: normal 1.85rem/1.1 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   color: var(--gold-pale);
   letter-spacing: -0.01em;
 }
@@ -344,22 +347,22 @@ button.person-row-money:hover, button.person-row-money:focus-visible { backgroun
 .budget-inline input {
   width: 84px; margin: 0; padding: 4px 8px; border-radius: 8px;
   border: 1px solid rgba(217, 179, 106, 0.55); background: rgba(4, 26, 12, 0.5);
-  color: var(--gold-pale); font-size: 16px; text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--gold-pale); font-size: 16px; text-align: right; font-variant-numeric: lining-nums tabular-nums;
 }
 .budget-inline input::placeholder { color: rgba(219, 225, 232, 0.5); }
 .budget-inline input:focus { outline: none; border-color: #d9b36a; }
 .person-row-name {
   flex: 1 1 auto; min-width: 0;
-  font-size: 1.12rem; font-weight: 600; color: var(--name-green);
-  letter-spacing: 0.01em;
+  font-size: 1.3rem; font-weight: 400; color: var(--name-green);
+  letter-spacing: 0.03em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .person-row-money {
-  flex: none; font-size: 0.88rem; letter-spacing: 0.01em; font-variant-numeric: tabular-nums;
+  flex: none; font-size: 0.88rem; letter-spacing: 0.01em; font-variant-numeric: lining-nums tabular-nums;
   color: #d9b36a; white-space: nowrap;
 }
 .person-row-money i { font-style: normal; opacity: 0.45; margin: 0 1px; }
-.person-row-money.is-over { color: #efb46a; font-weight: 600; }
+.person-row-money.is-over { color: #efb46a; font-weight: 500; }
 .person-row-money.is-unset { color: #efb46a; }
 .person-meter {
   height: 4px; margin: 0 16px 10px 40px; border-radius: 999px;
@@ -373,7 +376,7 @@ button.person-row-money:hover, button.person-row-money:focus-visible { backgroun
 }
 .person-meter.is-over i { background: linear-gradient(90deg, #ff5a4e, #ff8a5c); }
 .person-meter.is-unset { background: rgba(239, 224, 196, 0.09); }
-.person-row-money.is-over { color: #ff7a6b !important; font-weight: 600; }
+.person-row-money.is-over { color: #ff7a6b !important; font-weight: 500; }
 
 .chevron { flex: none; color: var(--silver-dim); transition: transform 0.18s ease; }
 .chevron.is-open { transform: rotate(180deg); }
@@ -472,7 +475,7 @@ dialog {
 .person-row:hover { background: rgba(239, 224, 196, 0.09); }
 .gift-row { border-top-color: rgba(239, 224, 196, 0.15); }
 /* Names stay green, brightened so they lift off the green box. */
-.person-row-name { color: #86efac; }
+.person-row-name { color: var(--name-green); }
 .summary > div + div:not(.summary-actions)::before { background: rgba(239, 224, 196, 0.22); }
 /* On a green box a green bar disappears, so the healthy fill is gold. */
 .person-meter { background: rgba(239, 224, 196, 0.14); }
@@ -529,7 +532,7 @@ dialog {
 .gift-name small { display: block; font-size: 0.74rem; color: var(--silver-dim); }
 .gift-name small a { color: var(--silver-dim); }
 .gift-price {
-  flex: none; font-size: 0.95rem; font-variant-numeric: tabular-nums;
+  flex: none; font-size: 0.95rem; font-variant-numeric: lining-nums tabular-nums;
   color: var(--gold-pale); min-width: 56px; text-align: right;
 }
 
@@ -561,7 +564,7 @@ dialog {
   padding: 6px 0 2px;
   border-top: 1px solid rgba(219, 225, 232, 0.14);
 }
-.plus { flex: none; color: #4ade80; font-size: 1.05rem; line-height: 1; font-weight: 600; }
+.plus { flex: none; color: var(--gold-soft); font-size: 1.05rem; line-height: 1; font-weight: 500; }
 .new-gift-row input {
   margin: 0; padding: 5px 0; background: transparent; border: none; border-radius: 0;
   font-size: 0.95rem; color: var(--ink);
@@ -570,12 +573,12 @@ dialog {
 .new-gift-name { flex: 1 1 auto; min-width: 0; }
 .new-gift-price {
   flex: none; width: 62px; text-align: right;
-  font-variant-numeric: tabular-nums; color: var(--gold-pale) !important;
+  font-variant-numeric: lining-nums tabular-nums; color: var(--gold-pale) !important;
 }
-.new-gift-row input::placeholder { color: rgba(219, 225, 232, 0.5); }
+.new-gift-row input::placeholder { color: rgba(227, 204, 148, 0.55); }
 .row-add {
   font-size: 0.78rem; line-height: 1; padding: 5px 12px; border-radius: 999px;
-  background: rgba(239, 224, 196, 0.16); color: var(--gold-pale); font-weight: 600;
+  background: rgba(239, 224, 196, 0.16); color: var(--gold-pale); font-weight: 500;
 }
 .row-add:hover { background: rgba(239, 224, 196, 0.28); }
 .row-gear { font-size: 0.95rem; line-height: 1; padding: 4px 6px; }
@@ -596,7 +599,7 @@ dialog {
 .person-edit label { margin: 0 0 10px; font-size: 0.85rem; }
 .person-edit input { font-size: 0.92rem; padding: 8px 11px; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.small-btn.save { background: linear-gradient(#e2c47c, #a8812a); border-color: #d9bc72; color: var(--wine); font-weight: 650; }
+.small-btn.save { background: linear-gradient(#e2c47c, #a8812a); border-color: #d9bc72; color: var(--wine); font-weight: 500; }
 .tucked-away { text-align: center; margin: 16px 0 0; }
 
 .person-form {
@@ -617,7 +620,7 @@ dialog {
   background: linear-gradient(90deg, transparent, var(--gold-line-soft));
 }
 .countdown-ribbon::after { background: linear-gradient(90deg, var(--gold-line-soft), transparent); }
-.countdown-ribbon b { font-weight: 600; color: var(--gold-pale); letter-spacing: 0.1em; }
+.countdown-ribbon b { font-weight: 500; color: var(--gold-pale); letter-spacing: 0.1em; }
 .countdown-foot {
   text-align: center; margin: 22px 0 0;
   font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase;
@@ -643,7 +646,7 @@ dialog {
   box-shadow: 0 8px 24px rgba(45, 0, 0, 0.3);
 }
 .over-budget-alert strong {
-  font: normal 1.05rem/1.3 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  font: normal 1.05rem/1.3 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   color: var(--gold-pale); letter-spacing: 0.02em;
 }
 .over-budget-link {
@@ -651,23 +654,23 @@ dialog {
   color: var(--silver); font-size: 0.9rem; text-decoration: underline; cursor: pointer;
 }
 .over-budget-link:hover { color: var(--gold-soft); }
-.over-budget-note { color: #efb46a; font-weight: 600; margin: 8px 0 0; font-size: 0.9rem; }
+.over-budget-note { color: #efb46a; font-weight: 500; margin: 8px 0 0; font-size: 0.9rem; }
 
 /* ---------- AI Gift Helper (the green accent) ---------- */
 .helper-tab {
   background: #14532d; color: #c8f3da;
-  font-weight: 600; font-size: 0.84rem;
+  font-weight: 500; font-size: 0.84rem;
   padding: 7px 13px; border-radius: 999px;
   border: 1px solid rgba(46, 158, 91, 0.7);
 }
-.helper-tab:hover { background: var(--pine-soft); color: #eafff1; }
+.helper-tab:hover { background: var(--pine-soft); color: #f0dcaa; }
 .helper-panel {
   background: linear-gradient(165deg, rgba(10, 48, 26, 0.72), rgba(61, 5, 3, 0.6));
   border: 1px solid var(--gold-line-soft);
   border-radius: 16px; padding: 16px 18px; margin: 16px 0 0;
 }
 .helper-greeting, .helper-msg { font-size: 0.92rem; line-height: 1.5; margin: 6px 0; color: rgba(255, 243, 220, 0.92); }
-.helper-msg.you { color: var(--gold-soft); font-weight: 600; }
+.helper-msg.you { color: var(--gold-soft); font-weight: 500; }
 .helper-ideas { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .helper-ideas li {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between;
@@ -755,10 +758,10 @@ dialog {
 .welcome-intro, .welcome-offer, .welcome-account, .welcome-footer { position:relative; z-index:1; min-width:0; }
 
 /* Story */
-.welcome-intro h1 { font:normal clamp(58px,5.7vw,92px)/.92 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; text-align:left; margin:0 0 22px; letter-spacing:-.03em; text-shadow:none; background:linear-gradient(104deg,#c9a253 0%,#e4cb8c 26%,#f2e3bd 42%,#d4ad5c 58%,#a8812a 100%); -webkit-background-clip:text; background-clip:text; color:#dcbe74; -webkit-text-fill-color:transparent; }
+.welcome-intro h1 { font:normal clamp(58px,5.7vw,92px)/.92 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; text-align:left; margin:0 0 22px; letter-spacing:-.03em; text-shadow:none; background:linear-gradient(104deg,#c9a253 0%,#e4cb8c 26%,#f2e3bd 42%,#d4ad5c 58%,#a8812a 100%); -webkit-background-clip:text; background-clip:text; color:#dcbe74; -webkit-text-fill-color:transparent; }
 .welcome-divider { height:2px; width:100%; max-width:360px; margin:0 0 16px; background:linear-gradient(90deg,#c09a41,#d6b55e 60%,transparent); }
 .welcome-subtitle { font-size:clamp(20px,1.75vw,27px); line-height:1.25; margin:0 0 16px; font-weight:500; text-wrap:balance; }
-.welcome-description { font-size:clamp(16px,1.25vw,19px); line-height:1.5; margin:0; max-width:30em; color:#f6e9d2; text-wrap:pretty; }
+.welcome-description { font-size:clamp(16px,1.25vw,19px); line-height:1.5; margin:0; max-width:30em; color:#f0dcaa; text-wrap:pretty; }
 
 /* The tree is scenery: tucked into the lower-left corner, behind everything. */
 .welcome-tree { position:absolute; z-index:0; left:-14px; bottom:0; height:clamp(200px,35vh,380px); width:auto; max-width:none; margin:0; display:block; pointer-events:none; user-select:none; }
@@ -769,24 +772,24 @@ dialog {
 .welcome-price { position:absolute; inset:36% 13% auto; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .welcome-price::before { content:""; position:absolute; inset:-14% -10% -16%; border-radius:50%; z-index:-1;
   background:radial-gradient(closest-side, rgba(74,4,2,0.82) 0%, rgba(74,4,2,0.55) 60%, transparent 100%); }
-.welcome-price strong { font:normal 60px/1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; font-size:19cqw; white-space:nowrap; color:#f6e9d7; text-shadow:0 2px 14px rgba(40,0,0,0.75); }
+.welcome-price strong { font:normal 60px/1 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; font-size:19cqw; white-space:nowrap; color:#f0dcaa; text-shadow:0 2px 14px rgba(40,0,0,0.75); }
 .welcome-price span { font-size:24px; font-size:7.4cqw; line-height:1.3; }
-.welcome-subscribe,.welcome-submit { border:1px solid #d9bc72; background:linear-gradient(#e2c47c,#a8812a); color:#5b0905; text-decoration:none; font-family:inherit; font-weight:650; box-shadow:0 3px 9px #3f00002b; cursor:pointer; }
+.welcome-subscribe,.welcome-submit { border:1px solid #d9bc72; background:linear-gradient(#e2c47c,#a8812a); color:#5b0905; text-decoration:none; font-family:inherit; font-weight: 500; box-shadow:0 3px 9px #3f00002b; cursor:pointer; }
 .welcome-subscribe { margin-top:4cqw; font-size:19px; font-size:max(16px,5.2cqw); border-radius:999px; padding:.42em 1.5em; }
 
 /* Account */
 .welcome-form-panel { border:2px solid #cba855; border-radius:26px; padding:20px 26px 22px; background:#63030055; }
 .welcome-form-panel .auth-tabs { margin:0 0 18px; gap:12px; display:flex; border-bottom:1px solid #cda742; }
-.welcome-form-panel .tab { border:0; border-radius:0; background:transparent; color:#f2e4cc; padding:4px 0 12px; font-size:19px; font-weight:500; flex:1; white-space:nowrap; border-bottom:3px solid transparent; margin-bottom:-1px; }
+.welcome-form-panel .tab { border:0; border-radius:0; background:transparent; color:#f0dcaa; padding:4px 0 12px; font-size:19px; font-weight:500; flex:1; white-space:nowrap; border-bottom:3px solid transparent; margin-bottom:-1px; }
 .welcome-form-panel .tab.active { border-bottom-color:#dcbe74; }
-.welcome-form-panel label { display:block; font-size:17px; font-weight:500; margin:0 0 12px; color:#f6e9d7; }
+.welcome-form-panel label { display:block; font-size:17px; font-weight:500; margin:0 0 12px; color:#f0dcaa; }
 .welcome-form-panel input { width:100%; box-sizing:border-box; display:block; margin-top:5px; background:rgba(4,26,12,0.52); color:#efe0c4; border:1px solid #cba855; border-radius:12px; padding:10px 14px; font-size:17px; min-height:46px; }
 .welcome-form-panel input::placeholder { color:#cdbf9e; opacity:0.8; }
 .welcome-submit { display:block; width:100%; margin-top:18px; border-radius:14px; padding:11px 10px; font-size:20px; }
 .welcome-submit:disabled, .check-email .forgot-link:disabled { opacity:.6; cursor:default; }
-.welcome-fine-print { text-align:center; color:#f2e4ce; font-size:15.5px; line-height:1.4; margin:14px 0 0; }
-.check-email h2 { font:normal 30px/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; color:#e4cb8c; }
-.check-email p, .check-email li { color:#f6e9d7; font-size:17px; line-height:1.45; }
+.welcome-fine-print { text-align:center; color:#f0dcaa; font-size:15.5px; line-height:1.4; margin:14px 0 0; }
+.check-email h2 { font:normal 30px/1.1 "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; color:#e4cb8c; }
+.check-email p, .check-email li { color:#f0dcaa; font-size:17px; line-height:1.45; }
 .check-email strong { color:#f2e3bd; }
 .check-email .forgot-link { display:block; margin:14px auto 0; }
 
@@ -868,7 +871,7 @@ dialog {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   margin: 4px auto 22px; padding: 13px 26px; max-width: 100%;
   background: linear-gradient(180deg, #e0213f 0%, var(--candy) 55%, var(--candy-dark) 100%);
-  color: #fbe7b4; font: inherit; font-weight: 650; font-size: 1.04rem; letter-spacing: 0.01em;
+  color: #fbe7b4; font: inherit; font-weight: 500; font-size: 1.04rem; letter-spacing: 0.01em;
   border: 1.5px solid #d9bc72; border-radius: 999px; cursor: pointer;
   box-shadow: 0 0 0 3px rgba(217, 188, 114, 0.18), 0 6px 16px rgba(40, 0, 0, 0.35);
 }
@@ -913,7 +916,7 @@ body.helper-open { overflow: hidden; }
   background: transparent; color: var(--gold-pale); font: inherit; font-size: 0.9rem;
   border: 1px solid var(--gold-line);
 }
-.shopper-chip.is-on { background: linear-gradient(#e2c47c, #a8812a); color: var(--wine); border-color: #d9bc72; font-weight: 650; }
+.shopper-chip.is-on { background: linear-gradient(#e2c47c, #a8812a); color: var(--wine); border-color: #d9bc72; font-weight: 500; }
 .shopper-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
 .shopper-bubble {
   margin: 0; max-width: 88%; align-self: flex-start;
@@ -924,7 +927,7 @@ body.helper-open { overflow: hidden; }
 .shopper-bubble.is-you {
   align-self: flex-end; border-radius: 16px 16px 4px 16px;
   background: linear-gradient(180deg, var(--candy) 0%, var(--candy-dark) 100%);
-  border-color: rgba(217, 188, 114, 0.7); color: #fff3dc;
+  border-color: rgba(217, 188, 114, 0.7); color: #f0dcaa;
 }
 .shopper-answer { display: flex; flex-direction: column; gap: 8px; }
 .shopper-ideas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -939,7 +942,7 @@ body.helper-open { overflow: hidden; }
 .shopper-add {
   flex: none; padding: 7px 13px; border-radius: 999px; cursor: pointer;
   background: linear-gradient(#e2c47c, #a8812a); color: var(--wine);
-  border: 1px solid #d9bc72; font: inherit; font-size: 0.85rem; font-weight: 650;
+  border: 1px solid #d9bc72; font: inherit; font-size: 0.85rem; font-weight: 500;
 }
 .shopper-add:disabled { background: transparent; color: var(--name-green); border-color: rgba(99, 216, 150, 0.6); cursor: default; }
 .shopper-bubble.is-typing { display: flex; gap: 5px; padding: 13px 15px; }
@@ -963,8 +966,8 @@ body.helper-open { overflow: hidden; }
   border: 1px dashed rgba(246, 223, 168, 0.45); background: rgba(0, 0, 0, 0.18);
   font-size: 0.88rem; color: #f6dfa8;
 }
-.shopper-memory summary { cursor: pointer; font-weight: 600; }
-.shopper-memory ul { margin: 8px 0; padding-left: 18px; color: #fff6e0; }
+.shopper-memory summary { cursor: pointer; font-weight: 500; }
+.shopper-memory ul { margin: 8px 0; padding-left: 18px; color: #f0dcaa; }
 .shopper-memory li { margin: 2px 0; }
 .shopper-memory .ghost-link { font-size: 0.85rem; color: #ffb3a7; }
 .shopper-error { margin: 0; padding: 8px 16px; font-size: 0.88rem; color: #ffd0c4; background: rgba(120, 10, 10, 0.5); }
@@ -982,7 +985,7 @@ body.helper-open { overflow: hidden; }
 .shopper-send {
   flex: none; padding: 0 18px; border-radius: 999px; cursor: pointer;
   background: linear-gradient(180deg, #e0213f, var(--candy-dark)); color: #fbe7b4;
-  border: 1px solid #d9bc72; font: inherit; font-weight: 650;
+  border: 1px solid #d9bc72; font: inherit; font-weight: 500;
 }
 .shopper-send:disabled, .shopper-quick:disabled { opacity: 0.55; cursor: default; }
 
