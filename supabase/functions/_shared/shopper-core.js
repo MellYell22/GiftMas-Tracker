@@ -158,7 +158,7 @@ export async function helperCore({ method, authorization, body, env }) {
   const req = cleanRequest(body)
   if (!req) return { status: 400, body: { error: MESSAGES.badRequest } }
   if (!env.openaiKey) {
-    console.error('shopper-helper: OPENAI_API_KEY is not set for this deployment')
+    console.error('shopper-helper: no OpenAI key is set for this deployment')
     return { status: 503, body: { error: MESSAGES.notSetUp, reason: 'not_set_up' } }
   }
 
@@ -181,6 +181,7 @@ export async function helperCore({ method, authorization, body, env }) {
 
   try {
     const answer = await askOpenAI(env, req.person, req.turns)
+    console.log(`shopper-helper: answered with ${answer.model}`)
     return {
       status: 200,
       body: {

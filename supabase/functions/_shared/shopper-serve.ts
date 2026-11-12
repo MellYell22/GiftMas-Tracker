@@ -22,6 +22,22 @@ function allowedOrigin(origin: string | null, mode: Mode): string {
   return SITE
 }
 
+// OPENAI_API_KEY first; otherwise any secret whose name mentions OpenAI and
+// whose value looks like an OpenAI key (the owner saved it under another name).
+// Only secret NAMES are ever logged, never values.
+let keyNote = ''
+function openaiKey(): string {
+  const direct = (Deno.env.get('OPENAI_API_KEY') ?? '').trim()
+  if (direct) return direct
+  let all: Record<string, string> = {}
+  try { all = Deno.env.toObject() } catch { /* env listing not allowed */ }
+  const names = Object.keys(all).filter((n) => /open_?ai/i.test(n))
+  const hit = names.find((n) => /^sk-/.test((all[n] ?? '').trim()))
+  const note = hit ? `using secret ${hit}` : `no OpenAI key found; OpenAI-like secret names: ${names.join(', ') || '(none)'}`
+  if (note !== keyNote) { keyNote = note; console.log(`shopper-helper: ${note}`) }
+  return hit ? all[hit].trim() : ''
+}
+
 export function serveShopperHelper(mode: Mode) {
   return {
     async fetch(req: Request) {
@@ -41,7 +57,7 @@ export function serveShopperHelper(mode: Mode) {
         env: {
           supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
           supabaseKey: Deno.env.get('SUPABASE_ANON_KEY') || req.headers.get('apikey') || '',
-          openaiKey: (Deno.env.get('OPENAI_API_KEY') ?? '').trim(),
+          openaiKey: openaiKey(),
           openaiModel: Deno.env.get('GIFTMAS_OPENAI_MODEL') ?? '',
           openaiBase: 'https://api.openai.com/v1',
           test: mode === 'test',
