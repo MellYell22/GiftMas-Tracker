@@ -298,6 +298,7 @@ export default function App() {
     let cancelled = false
     setLoadedUser('')
     setPeople([])
+    setHelperChats({})
     if (!user?.id) return
     setCloudMessage('Loading your saved list…')
     async function load() {

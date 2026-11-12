@@ -937,6 +937,15 @@ body.helper-open { overflow: hidden; }
 .shopper-upgrade p { margin: 0 0 6px; font-size: 0.95rem; }
 .shopper-upgrade .subscribe-btn, .shopper-upgrade .subscribe-btn:hover { align-self: center; margin: 8px 0 0; color: var(--wine); }
 .shopper-small { font-size: 0.85rem; color: #f6dfa8; }
+.shopper-memory {
+  align-self: stretch; margin: 0; padding: 8px 12px; border-radius: 12px;
+  border: 1px dashed rgba(246, 223, 168, 0.45); background: rgba(0, 0, 0, 0.18);
+  font-size: 0.88rem; color: #f6dfa8;
+}
+.shopper-memory summary { cursor: pointer; font-weight: 600; }
+.shopper-memory ul { margin: 8px 0; padding-left: 18px; color: #fff6e0; }
+.shopper-memory li { margin: 2px 0; }
+.shopper-memory .ghost-link { font-size: 0.85rem; color: #ffb3a7; }
 .shopper-error { margin: 0; padding: 8px 16px; font-size: 0.88rem; color: #ffd0c4; background: rgba(120, 10, 10, 0.5); }
 .shopper-form { padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--gold-line-soft); display: flex; flex-direction: column; gap: 8px; }
 .shopper-quick {

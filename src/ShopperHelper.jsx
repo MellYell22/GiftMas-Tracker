@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 // The AI Gift Shopper Helper chat panel. The AI runs on the server
-// (Supabase function giftmas-shopper-helper); this panel only sends the chosen person's details
-// and the conversation, and shows the answers.
+// (Supabase function giftmas-shopper-helper), which also keeps the helper's
+// memory (table giftmas_helper_memory): every chat and what it learned about
+// each person. This panel sends the chosen person's details and the new
+// question, shows the saved chat, and can forget a person's memory.
 
 export const HELPER_FREE_QUESTIONS = 3
 
@@ -12,9 +14,16 @@ function spentOn(person) {
   return person.gifts.filter((g) => g.checks?.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
 }
 
-function greeting(person) {
+const MEMORY_TABLE = 'giftmas_helper_memory'
+const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
+function greeting(person, returning) {
   const budget = Number(person.budget) || 0
   const left = budget - spentOn(person)
+  if (returning) {
+    if (budget && left <= 0) return `Welcome back! ${person.name}'s budget is all used up — raise it on their card if you'd like more ideas.`
+    return `Welcome back! I remember our chats about ${person.name}${budget ? ` — you have $${Math.round(left * 100) / 100} left` : ''}. What's next?`
+  }
   if (!budget) return `Ho ho ho! Let's find something lovely for ${person.name}. What do they enjoy? (Tip: set a budget so I can keep ideas in range.)`
   if (left <= 0) return `${person.name}'s budget is all used up! Raise it on their card if you'd like more ideas.`
   return `Ho ho ho! You have $${Math.round(left * 100) / 100} left for ${person.name}. Tell me a little about them, or tap “Suggest gifts”.`
@@ -25,12 +34,15 @@ export default function ShopperHelper({
   sandbox, unlimitedPlan, onSubscribe, checkoutBusy, checkoutMessage,
 }) {
   const person = people.find((p) => p.id === personId) || null
-  const chat = (person && chats[person.id]) || []
+  const entry = (person && chats[person.id]) || null
+  const chat = entry?.messages || []
+  const facts = entry?.facts || []
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [freeLeft, setFreeLeft] = useState(null)
   const [limitHit, setLimitHit] = useState(false)
+  const [forgetting, setForgetting] = useState(false)
   const scroller = useRef(null)
   const inputRef = useRef(null)
   const unlimited = unlimitedPlan || freeLeft === Infinity
@@ -47,6 +59,29 @@ export default function ShopperHelper({
     return () => { live = false }
   }, [sandbox])
 
+  // Load what the helper remembers about this person (once per session).
+  useEffect(() => {
+    if (!personId || chats[personId]) return
+    let live = true
+    setChats((all) => ({ ...all, [personId]: { messages: [], facts: [], loading: true } }))
+    supabase.from(MEMORY_TABLE).select('messages, facts').eq('test', sandbox).eq('person_id', personId).maybeSingle()
+      .then(({ data, error: e }) => {
+        if (!live) return
+        setChats((all) => ({ ...all, [personId]: {
+          messages: Array.isArray(data?.messages) ? data.messages : [],
+          facts: Array.isArray(data?.facts) ? data.facts : [],
+          returning: (data?.messages?.length || 0) + (data?.facts?.length || 0) > 0,
+          loading: false,
+          loadFailed: !!e,
+        } }))
+      })
+    return () => {
+      live = false
+      // Let a later open retry if this load never finished.
+      setChats((all) => (all[personId]?.loading ? (({ [personId]: _, ...rest }) => rest)(all) : all))
+    }
+  }, [personId, sandbox])
+
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -58,19 +93,32 @@ export default function ShopperHelper({
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })
   }, [chat.length, busy, limitHit, personId])
 
-  function updateChat(id, fn) {
-    setChats((all) => ({ ...all, [id]: fn(all[id] || []) }))
+  function updateChat(id, fn, newFacts) {
+    setChats((all) => {
+      const cur = all[id] || { messages: [], facts: [] }
+      return { ...all, [id]: { ...cur, messages: fn(cur.messages), ...(newFacts ? { facts: newFacts } : {}) } }
+    })
+  }
+
+  async function forget() {
+    if (!person || forgetting) return
+    if (!window.confirm(`Forget everything the helper remembers about ${person.name}? This can't be undone.`)) return
+    setForgetting(true)
+    setError('')
+    const { error: e } = await supabase.from(MEMORY_TABLE).delete().eq('test', sandbox).eq('person_id', person.id)
+    setForgetting(false)
+    if (e) { setError("Couldn't forget that just now — please try again."); return }
+    setChats((all) => ({ ...all, [person.id]: { messages: [], facts: [], loading: false } }))
   }
 
   async function send(text) {
     const q = text.trim()
-    if (!q || !person || busy) return
+    if (!q || !person || busy || entry?.loading) return
     if (limitHit && !unlimited) return
     setError('')
     setInput('')
     const id = person.id
-    const history = [...chat, { role: 'user', text: q }]
-    updateChat(id, () => history)
+    updateChat(id, (m) => [...m, { role: 'user', text: q }])
     setBusy(true)
     try {
       const { data: answer, error: failure } = await supabase.functions.invoke(helperFunction, {
@@ -80,9 +128,10 @@ export default function ShopperHelper({
             budget: Number(person.budget) || 0,
             spent: spentOn(person),
             notes: person.notes || '',
+            id: person.id,
             gifts: person.gifts.map((g) => ({ name: g.name, price: Number(g.price) || 0, bought: !!g.checks?.bought })),
           },
-          messages: history.map((m) => ({ role: m.role, text: m.text })),
+          question: q,
         },
       })
       let data = answer || {}
@@ -98,7 +147,8 @@ export default function ShopperHelper({
         return
       }
       if (failure || !data.reply) throw new Error(data.error || '')
-      updateChat(id, (m) => [...m, { role: 'assistant', text: data.reply, suggestions: data.suggestions || [] }])
+      updateChat(id, (m) => [...m, { role: 'assistant', text: data.reply, suggestions: data.suggestions || [] }],
+        Array.isArray(data.facts) ? data.facts : undefined)
       if (data.unlimited) setFreeLeft(Infinity)
       else if (typeof data.freeLeft === 'number') {
         setFreeLeft(data.freeLeft)
@@ -113,7 +163,8 @@ export default function ShopperHelper({
     }
   }
 
-  function addIdea(msgIndex, idea) {
+  function addIdea(idea) {
+    if (person.gifts.some((g) => sameName(g.name || '', idea.name))) return
     onAddGift(person.id, {
       id: crypto.randomUUID(),
       name: idea.name,
@@ -121,9 +172,6 @@ export default function ShopperHelper({
       store: '', link: '', barcode: '', photo: '',
       checks: { toBuy: true, bought: false, wrapped: false, needReturn: false },
     })
-    updateChat(person.id, (m) => m.map((msg, i) => (i === msgIndex
-      ? { ...msg, suggestions: msg.suggestions.map((s) => (s.name === idea.name ? { ...s, added: true } : s)) }
-      : msg)))
   }
 
   const showUpgrade = limitHit && !unlimited
@@ -158,7 +206,23 @@ export default function ShopperHelper({
             {!person ? (
               <p className="shopper-bubble">Who are we shopping for? Tap a name above. 🎄</p>
             ) : (<>
-              <p className="shopper-bubble">{greeting(person)}</p>
+              {entry?.loading ? (
+                <p className="shopper-bubble is-typing" aria-label="Remembering our chats"><span /><span /><span /></p>
+              ) : (
+                <p className="shopper-bubble">{greeting(person, !!entry?.returning)}</p>
+              )}
+              {entry?.loadFailed && <p className="shopper-small">I couldn't load our earlier chats just now, but you can keep asking.</p>}
+              {(facts.length > 0 || chat.length > 0) && !entry?.loading && (
+                <details className="shopper-memory">
+                  <summary>🧠 What I remember about {person.name}{facts.length ? ` (${facts.length})` : ''}</summary>
+                  {facts.length > 0
+                    ? <ul>{facts.map((f) => <li key={f}>{f}</li>)}</ul>
+                    : <p className="shopper-small">Just our chat so far — tell me what {person.name} likes and I'll remember it.</p>}
+                  <button type="button" className="ghost-link" onClick={forget} disabled={forgetting}>
+                    {forgetting ? 'Forgetting…' : `Forget everything about ${person.name}`}
+                  </button>
+                </details>
+              )}
               {chat.map((m, i) => (
                 m.role === 'user' ? (
                   <p key={i} className="shopper-bubble is-you">{m.text}</p>
@@ -167,18 +231,18 @@ export default function ShopperHelper({
                     <p className="shopper-bubble">{m.text}</p>
                     {m.suggestions?.length > 0 && (
                       <ul className="shopper-ideas">
-                        {m.suggestions.map((s) => (
+                        {m.suggestions.map((s) => { const added = person.gifts.some((g) => sameName(g.name || '', s.name)); return (
                           <li key={s.name}>
                             <div>
                               <strong>{s.name}</strong>
                               <span>about ${s.price}{s.why ? ` · ${s.why}` : ''}</span>
                             </div>
-                            <button type="button" className="shopper-add" disabled={s.added}
-                              onClick={() => addIdea(i, s)}>
-                              {s.added ? '✓ Added' : 'Add to list'}
+                            <button type="button" className="shopper-add" disabled={added}
+                              onClick={() => addIdea(s)}>
+                              {added ? '✓ Added' : 'Add to list'}
                             </button>
                           </li>
-                        ))}
+                        ) })}
                       </ul>
                     )}
                   </div>
@@ -200,7 +264,7 @@ export default function ShopperHelper({
 
           {person && !showUpgrade && (
             <form className="shopper-form" onSubmit={(e) => { e.preventDefault(); send(input) }}>
-              {chat.length === 0 && (
+              {chat.length === 0 && !entry?.loading && (
                 <button type="button" className="shopper-quick" disabled={busy}
                   onClick={() => send(`Suggest some gift ideas for ${person.name}.`)}>Suggest gifts</button>
               )}
