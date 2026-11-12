@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 
+import ShopperHelper from './ShopperHelper'
 import { supabase } from './supabase'
 
 // Stripe mode. The real site (giftmastracker.com) is always live. Every other
@@ -15,7 +16,7 @@ const SANDBOX = STRIPE_MODE === 'test'
 const CHECKOUT_FUNCTION = SANDBOX ? 'giftmas-test-create-checkout' : 'giftmas-create-checkout'
 const ACCESS_RPC = SANDBOX ? 'giftmas_test_has_access' : 'giftmas_has_access'
 const LIST_TABLE = SANDBOX ? 'giftmas_test_lists' : 'gift_lists'
-const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
+const ADMIN_EMAILS = ['contact@aa-designs.com', 'info@aa-designs.com', 's4smith528@gmail.com']
 // The free plan: this many people without paying. The database enforces the
 // same number (the gift_lists and giftmas_test_lists policies), so a change
 // here must be made there too. Owner accounts and subscribers are unlimited.
@@ -103,6 +104,9 @@ export default function App() {
   const [personBudget, setPersonBudget] = useState('')
   const [personNotes, setPersonNotes] = useState('')
   const [personLink, setPersonLink] = useState('')
+  const [helperOpen, setHelperOpen] = useState(false)
+  const [helperPerson, setHelperPerson] = useState(null)
+  const [helperChats, setHelperChats] = useState({})
 
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && ADMIN_EMAILS.includes((account.email || '').toLowerCase())
@@ -247,6 +251,13 @@ export default function App() {
     setPersonDetails(false)
     setPaywallOpen(true)
   }
+
+  // The Gift Shopper Helper opens on the chosen person, or on the only person.
+  function openHelper(personId) {
+    setHelperPerson(personId || (people.length === 1 ? people[0].id : helperPerson))
+    setHelperOpen(true)
+  }
+  const closeHelper = useCallback(() => setHelperOpen(false), [])
 
   function startAddingPerson() {
     if (atFreeLimit) openPaywall()
@@ -625,6 +636,11 @@ export default function App() {
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
         <p className="countdown-ribbon"><b>{days}</b> days until Christmas</p>
+        {planKnown && loadedUser === user.id && (
+          <button type="button" className="shopper-launch" onClick={() => openHelper(null)}>
+            <span aria-hidden="true">✨</span> Ask the AI Gift Shopper Helper
+          </button>
+        )}
         {planNote && <p className="plan-note" role="status">{planNote}</p>}
         {!planKnown && <p className="hint center" role="status">Checking your plan…</p>}
         {planKnown && (
@@ -673,6 +689,7 @@ export default function App() {
                 onUpdatePerson={(patch) => updatePerson(person.id, patch)}
                 onUpdateGift={(giftId, patch) => updateGift(person.id, giftId, patch)}
                 onDeleteGift={(giftId) => deleteGift(person.id, giftId)}
+                onOpenHelper={() => openHelper(person.id)}
               />
             ))}
             {!addingPerson && (
@@ -747,137 +764,26 @@ export default function App() {
           </p>
         )}
         </>)}
+        {helperOpen && (
+          <ShopperHelper
+            people={people}
+            personId={helperPerson}
+            onPickPerson={setHelperPerson}
+            chats={helperChats}
+            setChats={setHelperChats}
+            onClose={closeHelper}
+            onAddGift={addGift}
+            sandbox={SANDBOX}
+            unlimitedPlan={isOwner || subscribed}
+            onSubscribe={handleSubscribe}
+            checkoutBusy={checkoutBusy}
+            checkoutMessage={accessMessage === MSG_CHECKING ? '' : accessMessage}
+          />
+        )}
         <footer className="app-footer">Created by AA Designs<br /><span className="feedback-line">Questions or feedback? Contact us at <a href="mailto:contact@aa-designs.com">contact@aa-designs.com</a></span></footer>
       </main>
       <Analytics />
     </div>
-  )
-}
-
-const HELPER_ERROR = "The gift helper couldn't answer just now — please try again in a moment."
-
-// Local, on-device helper for this web version: it runs entirely in the
-// browser (no external AI API key, no live model calls), using the person's
-// notes, budget and what's left to pick ideas that fit.
-const HELPER_IDEAS = [
-  { keys: ['fish'], name: 'Fishing lure gift set', price: 25, reason: 'fits the fishing notes' },
-  { keys: ['fish'], name: 'Tackle box organizer', price: 24, reason: 'keeps fishing gear tidy' },
-  { keys: ['fish'], name: 'Fishing hat', price: 18, reason: 'a small fishing extra' },
-  { keys: ['music', 'sing', 'song'], name: 'Bluetooth speaker', price: 35, reason: 'for a music lover' },
-  { keys: ['music', 'sing', 'song'], name: 'Vinyl record by a favorite artist', price: 28, reason: 'for a music lover' },
-  { keys: ['book', 'read'], name: 'Bestselling novel', price: 17, reason: 'for a reader' },
-  { keys: ['book', 'read'], name: 'Reading light and bookmark set', price: 21, reason: 'for a reader' },
-  { keys: ['cook', 'bake', 'kitchen', 'food'], name: 'Recipe journal', price: 16, reason: 'for someone who cooks' },
-  { keys: ['cook', 'bake', 'kitchen', 'food'], name: 'Spice sampler set', price: 24, reason: 'for someone who cooks' },
-  { keys: ['sport', 'football', 'basketball', 'baseball'], name: 'Team cap', price: 22, reason: 'for a sports fan' },
-  { keys: ['sport', 'football', 'basketball', 'baseball'], name: 'Sports towel and bottle set', price: 20, reason: 'for a sports fan' },
-  { keys: ['art', 'draw', 'paint', 'craft'], name: 'Sketchbook and pencil set', price: 19, reason: 'for someone arty' },
-  { keys: ['art', 'draw', 'paint', 'craft'], name: 'Watercolor paint set', price: 23, reason: 'for someone arty' },
-  { keys: ['garden', 'plant', 'flower'], name: 'Herb garden starter kit', price: 21, reason: 'for a gardener' },
-  { keys: ['garden', 'plant', 'flower'], name: 'Garden gloves and tool set', price: 26, reason: 'for a gardener' },
-  { keys: ['coffee'], name: 'Gourmet coffee sampler', price: 20, reason: 'for a coffee drinker' },
-  { keys: ['tea'], name: 'Loose-leaf tea sampler', price: 18, reason: 'for a tea drinker' },
-  { keys: ['game'], name: 'Card game for family night', price: 15, reason: 'fun for game night' },
-  { keys: [], name: 'Cozy Christmas socks', price: 12, reason: 'a cozy classic' },
-  { keys: [], name: 'Hot cocoa and mug gift set', price: 18, reason: 'a cozy classic' },
-  { keys: [], name: 'Scented candle', price: 16, reason: 'a simple favorite' },
-  { keys: [], name: 'Puzzle book collection', price: 14, reason: 'a simple favorite' },
-  { keys: [], name: 'Warm winter gloves', price: 20, reason: 'useful all winter' },
-  { keys: [], name: 'Picture frame for a family photo', price: 15, reason: 'a personal touch' },
-  { keys: [], name: 'Snack gift basket', price: 28, reason: 'easy to share' },
-  { keys: [], name: 'Board game for family night', price: 30, reason: 'fun for everyone' },
-]
-
-function helperSuggestions(person, left) {
-  const text = `${person.notes || ''}`.toLowerCase()
-  const matched = HELPER_IDEAS.filter((i) => i.keys.length > 0 && i.keys.some((k) => text.includes(k)))
-  const pool = [...matched, ...HELPER_IDEAS.filter((i) => i.keys.length === 0)]
-  const already = new Set(person.gifts.map((g) => (g.name || '').toLowerCase()))
-  return pool.filter((i) => i.price <= left && !already.has(i.name.toLowerCase())).slice(0, 4)
-}
-
-function GiftHelper({ person, spent, onAddGift }) {
-  const left = (Number(person.budget) || 0) - spent
-  const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
-  const [ideas, setIdeas] = useState([])
-  const [error, setError] = useState('')
-
-  function ask(e) {
-    if (e) e.preventDefault()
-    const q = input.trim()
-    try {
-      if (left <= 0) {
-        setIdeas([])
-        setError('')
-        setMessages((m) => [
-          ...m,
-          ...(q ? [{ from: 'you', text: q }] : []),
-          { from: 'helper', text: `There's no money left in ${person.name}'s budget, so I can't suggest anything that fits right now.` },
-        ])
-        setInput('')
-        return
-      }
-      const found = helperSuggestions(person, left)
-      if (!found.length) throw new Error('no ideas')
-      setIdeas(found)
-      setError('')
-      setMessages((m) => [
-        ...m,
-        ...(q ? [{ from: 'you', text: q }] : []),
-        { from: 'helper', text: `Here are ${found.length} ideas for ${person.name} that fit the $${left} left in their budget:` },
-      ])
-    } catch {
-      setError(HELPER_ERROR)
-    }
-    setInput('')
-  }
-
-  function addIdea(idea) {
-    onAddGift({
-      id: crypto.randomUUID(),
-      name: idea.name,
-      price: idea.price,
-      store: '',
-      link: '',
-      barcode: '',
-      photo: '',
-      checks: { toBuy: true, bought: false, wrapped: false, needReturn: false },
-    })
-    setIdeas((prev) => prev.filter((i) => i.name !== idea.name))
-  }
-
-  return (
-    <>
-      <button type="button" className="helper-tab" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        ✨ {open ? 'Hide the AI Gift Helper' : 'Ask the AI Gift Helper'}
-      </button>
-      {open && (
-        <div className="helper-panel">
-          <p className="helper-greeting">Hi! I suggest gift ideas for {person.name} that fit the ${left} left in their budget. Ask me, or tap “Suggest ideas”.</p>
-          {messages.map((m, idx) => (
-            <p key={idx} className={m.from === 'you' ? 'helper-msg you' : 'helper-msg'}>{m.text}</p>
-          ))}
-          {ideas.length > 0 && (
-            <ul className="helper-ideas">
-              {ideas.map((idea) => (
-                <li key={idea.name}>
-                  <span>{idea.name} — ${idea.price} · {idea.reason}</span>
-                  <button type="button" className="small-btn" onClick={() => addIdea(idea)}>+ Add to their list</button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {error && <p className="error">{error}</p>}
-          <form className="helper-form" onSubmit={ask}>
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask for gift ideas…" aria-label="Ask the gift helper" maxLength={600} />
-            <button type="submit" className="small-btn">Ask</button>
-            <button type="button" className="small-btn" onClick={() => ask()}>Suggest ideas</button>
-          </form>
-        </div>
-      )}
-    </>
   )
 }
 
@@ -955,7 +861,7 @@ function Chevron({ open }) {
   )
 }
 
-function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGift, onUpdateGift, onDeleteGift }) {
+function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGift, onUpdateGift, onDeleteGift, onOpenHelper }) {
   const [editing, setEditing] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
   const [editName, setEditName] = useState(person.name)
@@ -1105,7 +1011,7 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
               {showOptions && (
                 <div className="person-options">
                   <button type="button" className="small-btn" onClick={startEditing}>Edit name, budget &amp; notes</button>
-                  <GiftHelper person={person} spent={spent} onAddGift={onAddGift} />
+                  <button type="button" className="helper-tab" onClick={onOpenHelper}>✨ Ask the AI Gift Helper</button>
                   <button type="button" className="small-btn danger" onClick={onDelete}>Delete {person.name}</button>
                 </div>
               )}

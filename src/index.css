@@ -841,3 +841,126 @@ dialog {
   color: #f3e3a3;
   background: rgba(0, 0, 0, 0.18);
 }
+
+/* ---------- AI Gift Shopper Helper (chat panel) ---------- */
+.shopper-launch {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 4px auto 22px; padding: 13px 26px; max-width: 100%;
+  background: linear-gradient(180deg, #e0213f 0%, var(--candy) 55%, var(--candy-dark) 100%);
+  color: #fbe7b4; font: inherit; font-weight: 650; font-size: 1.04rem; letter-spacing: 0.01em;
+  border: 1.5px solid #d9bc72; border-radius: 999px; cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(217, 188, 114, 0.18), 0 6px 16px rgba(40, 0, 0, 0.35);
+}
+.shopper-launch:hover { filter: brightness(1.08); }
+.shopper-launch:focus-visible { outline: 3px solid #f3d98f; outline-offset: 3px; }
+
+body.helper-open { overflow: hidden; }
+.shopper-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(30, 2, 1, 0.55);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.shopper {
+  width: min(460px, 100%); height: min(680px, 100%);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(170deg, #12401f 0%, #0a2c16 60%, #2a0603 100%);
+  border: 1.5px solid #c9a65a; border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  color: var(--ink);
+}
+.shopper-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 16px 18px 12px;
+  background: linear-gradient(180deg, var(--candy) 0%, var(--candy-dark) 100%);
+  border-bottom: 1px solid #d9bc72;
+}
+.shopper-head h2 { margin: 0; font-size: 1.18rem; color: #fbe7b4; }
+.shopper-count { margin: 2px 0 0; font-size: 0.82rem; color: #f6dfa8; }
+.shopper-close {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; padding: 0;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(251, 231, 180, 0.6);
+  color: #fbe7b4; font-size: 1.4rem; line-height: 1; cursor: pointer;
+}
+.shopper-people {
+  display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px;
+  border-bottom: 1px solid var(--gold-line-soft); scrollbar-width: none;
+}
+.shopper-people::-webkit-scrollbar { display: none; }
+.shopper-chip {
+  flex: none; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--gold-pale); font: inherit; font-size: 0.9rem;
+  border: 1px solid var(--gold-line);
+}
+.shopper-chip.is-on { background: linear-gradient(#e2c47c, #a8812a); color: var(--wine); border-color: #d9bc72; font-weight: 650; }
+.shopper-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+.shopper-bubble {
+  margin: 0; max-width: 88%; align-self: flex-start;
+  padding: 9px 13px; border-radius: 16px 16px 16px 4px;
+  background: rgba(255, 243, 220, 0.1); border: 1px solid var(--gold-line-soft);
+  font-size: 0.95rem; line-height: 1.45; color: rgba(255, 243, 220, 0.95);
+}
+.shopper-bubble.is-you {
+  align-self: flex-end; border-radius: 16px 16px 4px 16px;
+  background: linear-gradient(180deg, var(--candy) 0%, var(--candy-dark) 100%);
+  border-color: rgba(217, 188, 114, 0.7); color: #fff3dc;
+}
+.shopper-answer { display: flex; flex-direction: column; gap: 8px; }
+.shopper-ideas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.shopper-ideas li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border-radius: 14px;
+  background: rgba(10, 44, 22, 0.75); border: 1px solid var(--gold-line);
+}
+.shopper-ideas li div { display: flex; flex-direction: column; min-width: 0; }
+.shopper-ideas strong { font-size: 0.95rem; color: #fbe7b4; line-height: 1.3; }
+.shopper-ideas span { font-size: 0.82rem; color: var(--silver-dim); }
+.shopper-add {
+  flex: none; padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(#e2c47c, #a8812a); color: var(--wine);
+  border: 1px solid #d9bc72; font: inherit; font-size: 0.85rem; font-weight: 650;
+}
+.shopper-add:disabled { background: transparent; color: var(--name-green); border-color: rgba(99, 216, 150, 0.6); cursor: default; }
+.shopper-bubble.is-typing { display: flex; gap: 5px; padding: 13px 15px; }
+.shopper-bubble.is-typing span {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--gold-soft);
+  animation: shopper-dot 1.1s infinite ease-in-out;
+}
+.shopper-bubble.is-typing span:nth-child(2) { animation-delay: 0.15s; }
+.shopper-bubble.is-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes shopper-dot { 0%, 80%, 100% { opacity: 0.3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .shopper-bubble.is-typing span { animation: none; opacity: 0.7; } }
+.shopper-upgrade {
+  margin-top: 4px; padding: 14px; border-radius: 16px; text-align: center;
+  background: rgba(61, 5, 3, 0.65); border: 1px solid #d9bc72;
+}
+.shopper-upgrade p { margin: 0 0 6px; font-size: 0.95rem; }
+.shopper-upgrade .subscribe-btn, .shopper-upgrade .subscribe-btn:hover { align-self: center; margin: 8px 0 0; color: var(--wine); }
+.shopper-small { font-size: 0.85rem; color: #f6dfa8; }
+.shopper-error { margin: 0; padding: 8px 16px; font-size: 0.88rem; color: #ffd0c4; background: rgba(120, 10, 10, 0.5); }
+.shopper-form { padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--gold-line-soft); display: flex; flex-direction: column; gap: 8px; }
+.shopper-quick {
+  align-self: flex-start; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  background: transparent; color: #fbe7b4; font: inherit; font-size: 0.88rem;
+  border: 1px solid #d9bc72;
+}
+.shopper-row { display: flex; gap: 8px; }
+.shopper-row input {
+  flex: 1; min-width: 0; margin: 0; font-size: 16px; /* 16px stops iPhone zooming in */
+  padding: 10px 14px; border-radius: 999px;
+}
+.shopper-send {
+  flex: none; padding: 0 18px; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(180deg, #e0213f, var(--candy-dark)); color: #fbe7b4;
+  border: 1px solid #d9bc72; font: inherit; font-weight: 650;
+}
+.shopper-send:disabled, .shopper-quick:disabled { opacity: 0.55; cursor: default; }
+
+@media (max-width: 640px) {
+  .shopper-backdrop { padding: 0; align-items: stretch; }
+  .shopper {
+    width: 100%; height: 100%; height: 100dvh; border-radius: 0; border: none;
+  }
+  .shopper-head { padding-top: calc(14px + env(safe-area-inset-top)); }
+}
+@media print { .shopper-launch, .shopper-backdrop { display: none !important; } }
