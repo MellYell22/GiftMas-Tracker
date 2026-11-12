@@ -871,6 +871,10 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
   const [editLink, setEditLink] = useState(person.link || '')
   const [giftName, setGiftName] = useState('')
   const [giftPrice, setGiftPrice] = useState('')
+  const giftNameRef = useRef(null)
+  // The small budget box that opens in the person's row.
+  const [budgetOpen, setBudgetOpen] = useState(false)
+  const [budgetDraft, setBudgetDraft] = useState('')
 
   const budget = Number(person.budget) || 0
   const spent = person.gifts.filter((g) => g.checks.bought).reduce((s, g) => s + (Number(g.price) || 0), 0)
@@ -897,6 +901,25 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
     setEditing(false)
   }
 
+  function openBudget() {
+    setBudgetDraft(person.budget === '' || person.budget == null ? '' : String(person.budget))
+    setBudgetOpen(true)
+  }
+
+  // Saves from the row. The "Edit name, budget & notes" form reads person.budget
+  // when it opens, so both ways always show the same number.
+  function saveBudget(e) {
+    e.preventDefault()
+    const value = budgetDraft.trim()
+    if (value !== '') {
+      const amount = Math.round(Number(value) * 100) / 100
+      if (!Number.isFinite(amount) || amount < 0) return
+      onUpdatePerson({ budget: amount })
+      setEditBudget(amount)
+    }
+    setBudgetOpen(false)
+  }
+
   function submitGift(e) {
     e.preventDefault()
     if (!giftName.trim()) return
@@ -909,17 +932,41 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
     })
     setGiftName('')
     setGiftPrice('')
+    giftNameRef.current?.focus()
   }
 
   return (
     <div className={open ? 'person-block is-open' : 'person-block'} id={`person-${person.id}`}>
-      <button type="button" className="person-row" aria-expanded={open} onClick={onToggle}>
-        <Chevron open={open} />
-        <span className="person-row-name">{person.name}</span>
-        <span className={over > 0 ? 'person-row-money is-over' : budget ? 'person-row-money' : 'person-row-money is-unset'}>
-          {budget ? <>${spent} <i>/</i> ${budget}</> : 'Set a budget'}
-        </span>
-      </button>
+      <div className="person-row">
+        <button type="button" className="person-row-toggle" aria-expanded={open} onClick={onToggle}>
+          <Chevron open={open} />
+          <span className="person-row-name">{person.name}</span>
+        </button>
+        {budgetOpen ? (
+          <form className="budget-inline" onSubmit={saveBudget}>
+            <span className="budget-inline-dollar" aria-hidden="true">$</span>
+            <input
+              autoFocus
+              type="number" min="0" step="0.01" inputMode="decimal" enterKeyHint="done"
+              value={budgetDraft}
+              onChange={(e) => setBudgetDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setBudgetOpen(false) }}
+              placeholder="Budget"
+              aria-label={`Budget for ${person.name}`}
+            />
+            <button type="submit" className="row-add">Save</button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className={over > 0 ? 'person-row-money is-over' : budget ? 'person-row-money' : 'person-row-money is-unset'}
+            onClick={openBudget}
+            aria-label={budget ? `${person.name}: $${spent} spent of $${budget} budget. Change budget` : `Set a budget for ${person.name}`}
+          >
+            {budget ? <>${spent} <i>/</i> ${budget}</> : 'Set a budget'}
+          </button>
+        )}
+      </div>
       <div
         className={over > 0 ? 'person-meter is-over' : budget ? 'person-meter' : 'person-meter is-unset'}
         aria-hidden="true"
@@ -985,10 +1032,11 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
               <form className="new-gift-row" onSubmit={submitGift}>
                 <span className="plus" aria-hidden="true">+</span>
                 <input
+                  ref={giftNameRef}
                   className="new-gift-name"
                   value={giftName}
                   onChange={(e) => setGiftName(e.target.value)}
-                  placeholder="New Gift"
+                  placeholder="Gift name"
                   aria-label={`New gift for ${person.name}`}
                 />
                 <input
@@ -996,8 +1044,8 @@ function PersonCard({ person, open, onToggle, onDelete, onUpdatePerson, onAddGif
                   type="number" min="0" step="0.01"
                   value={giftPrice}
                   onChange={(e) => setGiftPrice(e.target.value)}
-                  placeholder="$"
-                  aria-label="Price"
+                  placeholder="Price"
+                  aria-label={`Gift price for ${person.name}`}
                 />
                 {(giftName.trim() || giftPrice !== '') && <button type="submit" className="row-add">Add</button>}
                 <button
