@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from './supabase'
 
-const PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIgB9dCm8Sy7BY4sE00'
 const ADMIN_EMAILS = ['contact@aa-designs.com', 's4smith528@gmail.com']
 const dataKey = (email) => `christmas-app-data-${email}`
 
@@ -72,6 +71,9 @@ export default function App() {
   const [accessUser, setAccessUser] = useState('')
   const [accessMessage, setAccessMessage] = useState('Checking subscription…')
   const [accessRetry, setAccessRetry] = useState(0)
+  const checkoutInFlight = useRef(false)
+  const [checkoutBusy, setCheckoutBusy] = useState(false)
+  const [checkoutMessage, setCheckoutMessage] = useState('')
   const [openPerson, setOpenPerson] = useState(null)
   const [addingPerson, setAddingPerson] = useState(false)
   const [personDetails, setPersonDetails] = useState(false)
@@ -83,7 +85,6 @@ export default function App() {
   const account = user ? { email: user.email, name: user.user_metadata?.name || user.email } : null
   const isOwner = !!account && ADMIN_EMAILS.includes((account.email || '').toLowerCase())
   const locked = !!account && (accessUser !== user.id || !subscribed)
-  const checkoutUrl = user ? `${PAYMENT_LINK}?client_reference_id=${encodeURIComponent(user.id)}&locked_prefilled_email=${encodeURIComponent(user.email || '')}` : PAYMENT_LINK
   const days = daysUntilChristmas()
   const saveTone = /not saved|could not/i.test(cloudMessage)
     ? ' is-error'
@@ -124,6 +125,48 @@ export default function App() {
       window.removeEventListener('focus', checkAccess)
     }
   }, [user?.id, accessRetry])
+
+  async function handleSubscribe(event) {
+    event.preventDefault()
+    if (checkoutInFlight.current) return
+    checkoutInFlight.current = true
+    setCheckoutBusy(true)
+    setCheckoutMessage('Opening secure checkout…')
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      const session = sessionData?.session
+      if (sessionError || !session?.access_token || session.user.id !== user?.id) {
+        throw new Error('Please sign in again before subscribing.')
+      }
+      const { data, error } = await supabase.functions.invoke('giftmas-create-checkout', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {},
+      })
+      if (error) {
+        let message = 'Could not open checkout. Please try again.'
+        try {
+          const details = await error.context?.json()
+          if (typeof details?.error === 'string') message = details.error
+        } catch { /* Keep the safe fallback when the response is not JSON. */ }
+        throw new Error(message)
+      }
+      if (data?.alreadySubscribed === true) {
+        setCheckoutMessage('')
+        handleUnlock()
+        return
+      }
+      const url = new URL(data?.url)
+      if (url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com') {
+        throw new Error('Checkout returned an invalid address. Please try again.')
+      }
+      window.location.assign(url.href)
+    } catch (error) {
+      setCheckoutMessage(error?.message || 'Could not open checkout. Please try again.')
+    } finally {
+      checkoutInFlight.current = false
+      setCheckoutBusy(false)
+    }
+  }
 
   function handleUnlock() {
     setAccessMessage('Checking subscription…')
@@ -489,13 +532,13 @@ export default function App() {
         <p className="tagline">with <span className="helper-highlight">✨ AI Gift Shopper Helper</span></p>
         <div className="masthead-rule" aria-hidden="true" />
         <p className="countdown-ribbon"><b>{days}</b> days until Christmas</p>
-        {locked && <a className="subscribe-btn" href={checkoutUrl} target="_blank" rel="noreferrer">Subscribe — $19.99/year</a>}
+        {locked && <a className="subscribe-btn" href="#" onClick={handleSubscribe} aria-disabled={checkoutBusy} aria-busy={checkoutBusy}>Subscribe — $19.99/year</a>}
 
         {locked && (
           <section className="card">
             <h2>Subscribe to open your tracker</h2>
             <p className="hint">Giftmas Tracker is $19.99 a year. Subscribe using your account email. Your tracker opens after payment is verified.</p>
-            <p role="status">{accessMessage}</p>
+            <p role="status">{checkoutMessage || accessMessage}</p>
             <button type="button" className="primary-btn" onClick={handleUnlock}>Check payment status</button>
           </section>
         )}
