@@ -8,7 +8,7 @@
 -- directly (RLS on, no policies). Only the two SECURITY DEFINER functions below
 -- touch it, and they only ever act on the signed-in user (auth.uid()).
 --
--- How the server (api/shopper-helper.js) uses them:
+-- How the giftmas-shopper-helper function (supabase/functions/_shared/shopper-core.js) uses them:
 --   1. giftmas_helper_take(p_test) before calling the AI. It checks the limits,
 --      counts the question and returns a one-time ticket.
 --   2. If the AI call fails, giftmas_helper_refund(p_test, ticket) gives the

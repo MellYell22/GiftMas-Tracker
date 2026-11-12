@@ -1,7 +1,9 @@
-// The AI Gift Shopper Helper's logic, kept free of Vercel specifics so the
+// The AI Gift Shopper Helper's logic, kept free of runtime specifics so the
 // tests can run it with fake Supabase and OpenAI servers.
 
-export const MODELS = ['gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-4o-mini']
+// Cheapest first (Nov 2026 prices): GPT-6 Luna, then the next-cheapest as backups
+// in case this key can't use it. GIFTMAS_OPENAI_MODEL overrides the first choice.
+export const MODELS = ['gpt-6-luna', 'gpt-5.4-nano', 'gpt-4.1-nano']
 const MAX_TURNS = 12
 const MAX_TEXT = 600
 

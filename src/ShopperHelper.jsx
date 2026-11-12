@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 // The AI Gift Shopper Helper chat panel. The AI runs on the server
-// (api/shopper-helper.js); this panel only sends the chosen person's details
+// (Supabase function giftmas-shopper-helper); this panel only sends the chosen person's details
 // and the conversation, and shows the answers.
 
 export const HELPER_FREE_QUESTIONS = 3
@@ -34,6 +34,7 @@ export default function ShopperHelper({
   const scroller = useRef(null)
   const inputRef = useRef(null)
   const unlimited = unlimitedPlan || freeLeft === Infinity
+  const helperFunction = sandbox ? 'giftmas-test-shopper-helper' : 'giftmas-shopper-helper'
 
   // How many free questions are left (shown to free accounts only).
   useEffect(() => {
@@ -72,11 +73,8 @@ export default function ShopperHelper({
     updateChat(id, () => history)
     setBusy(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const r = await fetch('/api/shopper-helper', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({
+      const { data: answer, error: failure } = await supabase.functions.invoke(helperFunction, {
+        body: {
           person: {
             name: person.name,
             budget: Number(person.budget) || 0,
@@ -85,10 +83,13 @@ export default function ShopperHelper({
             gifts: person.gifts.map((g) => ({ name: g.name, price: Number(g.price) || 0, bought: !!g.checks?.bought })),
           },
           messages: history.map((m) => ({ role: m.role, text: m.text })),
-        }),
+        },
       })
-      const data = await r.json().catch(() => ({}))
-      if (r.status === 402 || data.reason === 'free_limit') {
+      let data = answer || {}
+      if (failure) {
+        try { data = (await failure.context?.json()) || {} } catch { data = {} }
+      }
+      if (data.reason === 'free_limit') {
         // The question was not answered, so take it back out of the chat.
         updateChat(id, (m) => m.slice(0, -1))
         setInput(q)
@@ -96,7 +97,7 @@ export default function ShopperHelper({
         setLimitHit(true)
         return
       }
-      if (!r.ok) throw new Error(data.error || '')
+      if (failure || !data.reply) throw new Error(data.error || '')
       updateChat(id, (m) => [...m, { role: 'assistant', text: data.reply, suggestions: data.suggestions || [] }])
       if (data.unlimited) setFreeLeft(Infinity)
       else if (typeof data.freeLeft === 'number') {

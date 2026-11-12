@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
-import { MESSAGES, cleanRequest, helperCore, tidySuggestions } from '../api/_lib/shopper-core.js'
+import { MESSAGES, cleanRequest, helperCore, tidySuggestions } from '../supabase/functions/_shared/shopper-core.js'
 
 const env = { supabaseUrl: 'https://sb.test', supabaseKey: 'pk', openaiKey: 'sk-fake', openaiModel: '', openaiBase: 'https://ai.test/v1', test: true }
 const person = { name: 'Grandma', budget: 100, spent: 40, notes: 'loves gardening', gifts: [{ name: 'Garden gloves', price: 40, bought: true }] }
